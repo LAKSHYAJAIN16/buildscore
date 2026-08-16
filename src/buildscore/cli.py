@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+import httpx
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -11,6 +12,7 @@ from .github_client import GitHubClient, MissingTokenError, RateLimitError
 from .lifecycle import classify_repo
 from .models import BuildscoreResult, Release, RepoData
 from .scoring import compute_score, compute_stats, compute_vector
+from .security import check_for_suspicious_drift
 
 app = typer.Typer(add_completion=False)
 console = Console()
@@ -71,6 +73,16 @@ def score(
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
 
+    try:
+        authenticated_as = client.whoami()
+        console.print(f"[dim]Authenticated as: {authenticated_as}[/dim]")
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 401:
+            console.print("[bold red]Error:[/bold red] Token is invalid or expired.")
+            client.close()
+            raise typer.Exit(1)
+        console.print("[dim]Could not verify token identity (continuing anyway).[/dim]")
+
     now = datetime.now(timezone.utc)
     raw_repos: list[dict] = []
     classifications = []
@@ -97,6 +109,11 @@ def score(
         limit = client.rate_limit_limit
         if remaining is not None and limit is not None:
             console.print(f"[dim]GitHub API calls remaining: {remaining}/{limit}[/dim]")
+
+        drift_warning = check_for_suspicious_drift(client)
+        if drift_warning is not None:
+            console.print(f"[bold yellow]Warning:[/bold yellow] {drift_warning.message}")
+
         client.close()
 
     stats = compute_stats(classifications)

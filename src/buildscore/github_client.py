@@ -38,14 +38,22 @@ class GitHubClient:
             },
             timeout=30.0,
         )
+        self.token = token
         self.rate_limit_limit: int | None = None
         self.rate_limit_remaining: int | None = None
         self.rate_limit_reset: datetime | None = None
+        self.calls_made = 0
 
     def close(self) -> None:
         self._client.close()
 
+    def whoami(self) -> str:
+        resp = self._get("/user")
+        resp.raise_for_status()
+        return resp.json()["login"]
+
     def _get(self, url: str, **kwargs) -> httpx.Response:
+        self.calls_made += 1
         resp = self._client.get(url, **kwargs)
         self._record_rate_limit(resp)
         if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
