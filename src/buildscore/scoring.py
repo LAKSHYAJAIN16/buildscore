@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from .models import BuilderStats, BuilderVector, RepoClassification
 from .variables import (
+    ACTIVENESS_GRAVEYARD_THRESHOLD,
     AMBITION_DIVERSITY_CAP,
     AMBITION_DIVERSITY_PER_LANGUAGE,
     AMBITION_LANGUAGE_BONUS,
@@ -16,22 +17,17 @@ from .variables import (
     VELOCITY_HALF_LIFE_DAYS,
 )
 
-SHIPPED_STAGES = {"shipped", "maintained"}
-
 
 def compute_stats(classifications: list[RepoClassification]) -> BuilderStats:
     meaningful = [c for c in classifications if c.is_meaningful]
-    shipped = [c for c in meaningful if c.stage in SHIPPED_STAGES]
-    abandoned = [c for c in meaningful if c.stage == "abandoned"]
+    shipped = [c for c in meaningful if c.repo.releases]
+    dead = [c for c in meaningful if c.activeness < ACTIVENESS_GRAVEYARD_THRESHOLD]
 
     ship_times = [c.time_to_ship_days for c in shipped if c.time_to_ship_days is not None]
 
-    weekly_active: set[int] = set()
     daily_active: set = set()
     for c in meaningful:
         for week in c.repo.weekly_commit_activity:
-            if week.get("total", 0) > 0:
-                weekly_active.add(week["week"])
             week_start = datetime.fromtimestamp(week["week"], tz=timezone.utc)
             for day_offset, count in enumerate(week.get("days", [])):
                 if count > 0:
@@ -44,9 +40,9 @@ def compute_stats(classifications: list[RepoClassification]) -> BuilderStats:
         meaningful_projects=len(meaningful),
         shipped_projects=len(shipped),
         completion_rate=len(shipped) / len(meaningful) if meaningful else 0.0,
-        graveyard_rate=len(abandoned) / len(meaningful) if meaningful else 0.0,
+        graveyard_rate=len(dead) / len(meaningful) if meaningful else 0.0,
         median_time_to_ship_days=statistics.median(ship_times) if ship_times else None,
-        active_weeks_ratio=len(weekly_active) / 52 if meaningful else 0.0,
+        avg_activeness=statistics.mean(c.activeness for c in meaningful) if meaningful else 0.0,
         longest_streak_days=_longest_streak(daily_active),
         avg_releases_per_shipped=(
             statistics.mean(releases_per_shipped) if releases_per_shipped else 0.0
@@ -95,7 +91,7 @@ def compute_vector(
         if stats.shipped_projects
         else None
     )
-    consistency = min(100.0, stats.active_weeks_ratio * 100) if stats.meaningful_projects else None
+    consistency = stats.avg_activeness if stats.meaningful_projects else None
     ambition = (
         statistics.mean(_repo_ambition_score(c.repo) for c in meaningful) if meaningful else None
     )

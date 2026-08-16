@@ -21,14 +21,14 @@ class RepoData:
     stargazers_count: int
     languages: dict[str, int]
     releases: list[Release]
-    commit_count_estimate: int
     weekly_commit_activity: list[dict]
+    code_frequency: list[list[int]]
 
 
 @dataclass
 class RepoClassification:
     repo: RepoData
-    stage: str
+    activeness: float
     is_meaningful: bool
     ship_date: datetime | None
     time_to_ship_days: float | None
@@ -42,7 +42,7 @@ class BuilderStats:
     completion_rate: float
     graveyard_rate: float
     median_time_to_ship_days: float | None
-    active_weeks_ratio: float
+    avg_activeness: float
     longest_streak_days: int
     avg_releases_per_shipped: float
 

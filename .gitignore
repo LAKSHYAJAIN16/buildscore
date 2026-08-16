@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .env
+src/buildscore/variables.py
 *.egg-info/
 build/
 dist/

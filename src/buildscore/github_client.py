@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from .variables import RATE_LIMIT_SAFETY_MARGIN
+from .variables import RATE_LIMIT_SAFETY_MARGIN, STATS_MAX_RETRIES, STATS_RETRY_BACKOFF_SECONDS
 
 GITHUB_API = "https://api.github.com"
 
@@ -107,12 +107,18 @@ class GitHubClient:
         return resp.json()
 
     def commit_activity(self, owner: str, repo: str) -> list[dict]:
+        return self._get_stats(f"/repos/{owner}/{repo}/stats/commit_activity")
+
+    def code_frequency(self, owner: str, repo: str) -> list[list[int]]:
+        return self._get_stats(f"/repos/{owner}/{repo}/stats/code_frequency")
+
+    def _get_stats(self, url: str) -> list:
         # GitHub computes these stats asynchronously on first request and
         # returns 202 until the cache is warm.
-        for attempt in range(5):
-            resp = self._get(f"/repos/{owner}/{repo}/stats/commit_activity")
+        for attempt in range(STATS_MAX_RETRIES):
+            resp = self._get(url)
             if resp.status_code == 202:
-                time.sleep(2 * (attempt + 1))
+                time.sleep(STATS_RETRY_BACKOFF_SECONDS * (attempt + 1))
                 continue
             if resp.status_code == 204:
                 return []

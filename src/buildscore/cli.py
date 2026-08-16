@@ -9,11 +9,16 @@ from rich.console import Console
 from rich.table import Table
 
 from .github_client import GitHubClient, MissingTokenError, RateLimitError
-from .lifecycle import classify_repo
+from .lifecycle import classify_repo, is_repo_worth_full_analysis
 from .models import BuildscoreResult, Release, RepoData
 from .scoring import compute_score, compute_stats, compute_vector
 from .security import check_for_suspicious_drift
-from .variables import DEFAULT_MAX_REPOS
+from .variables import (
+    ACTIVENESS_LABEL_ACTIVE,
+    ACTIVENESS_LABEL_COOLING,
+    ACTIVENESS_LABEL_THRIVING,
+    DEFAULT_MAX_REPOS,
+)
 
 app = typer.Typer(add_completion=False)
 console = Console()
@@ -23,7 +28,31 @@ def _parse_dt(s: str) -> datetime:
     return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
+def _base_repo_data(raw_repo: dict, **overrides) -> RepoData:
+    fields = {
+        "name": raw_repo["name"],
+        "full_name": raw_repo["full_name"],
+        "created_at": _parse_dt(raw_repo["created_at"]),
+        "pushed_at": _parse_dt(raw_repo["pushed_at"]),
+        "is_fork": raw_repo["fork"],
+        "is_archived": raw_repo["archived"],
+        "size_kb": raw_repo["size"],
+        "stargazers_count": raw_repo["stargazers_count"],
+        "languages": {},
+        "releases": [],
+        "weekly_commit_activity": [],
+        "code_frequency": [],
+    }
+    fields.update(overrides)
+    return RepoData(**fields)
+
+
 def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
+    # Repos too small/trivial to be worth the ~4 extra API calls are
+    # scored 0 directly, without ever touching the network for them.
+    if not is_repo_worth_full_analysis(raw_repo["size"], raw_repo["fork"]):
+        return _base_repo_data(raw_repo)
+
     owner = raw_repo["owner"]["login"]
     name = raw_repo["name"]
 
@@ -39,21 +68,14 @@ def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
 
     languages = client.languages(owner, name)
     weekly_activity = client.commit_activity(owner, name)
-    commit_count_estimate = sum(week.get("total", 0) for week in weekly_activity)
+    code_freq = client.code_frequency(owner, name)
 
-    return RepoData(
-        name=name,
-        full_name=raw_repo["full_name"],
-        created_at=_parse_dt(raw_repo["created_at"]),
-        pushed_at=_parse_dt(raw_repo["pushed_at"]),
-        is_fork=raw_repo["fork"],
-        is_archived=raw_repo["archived"],
-        size_kb=raw_repo["size"],
-        stargazers_count=raw_repo["stargazers_count"],
+    return _base_repo_data(
+        raw_repo,
         languages=languages,
         releases=releases,
-        commit_count_estimate=commit_count_estimate,
         weekly_commit_activity=weekly_activity,
+        code_frequency=code_freq,
     )
 
 
@@ -162,8 +184,19 @@ def _print_pretty(result: BuildscoreResult) -> None:
         console.print(f"Median time-to-ship: {s.median_time_to_ship_days:.1f} days")
     else:
         console.print("Median time-to-ship: n/a")
+    console.print(f"Average activeness: {s.avg_activeness:.0f}/100")
     console.print(f"Longest commit streak: {s.longest_streak_days} days")
     console.print()
+
+
+def _activeness_label(score: float) -> str:
+    if score >= ACTIVENESS_LABEL_THRIVING:
+        return "thriving"
+    if score >= ACTIVENESS_LABEL_ACTIVE:
+        return "active"
+    if score >= ACTIVENESS_LABEL_COOLING:
+        return "cooling"
+    return "quiet"
 
 
 def _serialize(result: BuildscoreResult) -> dict:
@@ -188,14 +221,15 @@ def _serialize(result: BuildscoreResult) -> dict:
             "completion_rate": result.stats.completion_rate,
             "graveyard_rate": result.stats.graveyard_rate,
             "median_time_to_ship_days": result.stats.median_time_to_ship_days,
-            "active_weeks_ratio": result.stats.active_weeks_ratio,
+            "avg_activeness": result.stats.avg_activeness,
             "longest_streak_days": result.stats.longest_streak_days,
             "avg_releases_per_shipped": result.stats.avg_releases_per_shipped,
         },
         "repos": [
             {
                 "name": c.repo.name,
-                "stage": c.stage,
+                "activeness": round(c.activeness, 1),
+                "label": _activeness_label(c.activeness),
                 "is_meaningful": c.is_meaningful,
                 "time_to_ship_days": c.time_to_ship_days,
                 "stars": c.repo.stargazers_count,
