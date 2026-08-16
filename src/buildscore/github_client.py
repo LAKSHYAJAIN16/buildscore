@@ -6,10 +6,9 @@ from datetime import datetime, timezone
 
 import httpx
 
-GITHUB_API = "https://api.github.com"
+from .variables import RATE_LIMIT_SAFETY_MARGIN
 
-# Abort proactively instead of letting GitHub 403 us mid-run.
-RATE_LIMIT_SAFETY_MARGIN = 20
+GITHUB_API = "https://api.github.com"
 
 
 class MissingTokenError(RuntimeError):

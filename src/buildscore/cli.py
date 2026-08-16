@@ -13,6 +13,7 @@ from .lifecycle import classify_repo
 from .models import BuildscoreResult, Release, RepoData
 from .scoring import compute_score, compute_stats, compute_vector
 from .security import check_for_suspicious_drift
+from .variables import DEFAULT_MAX_REPOS
 
 app = typer.Typer(add_completion=False)
 console = Console()
@@ -64,7 +65,7 @@ def score(
         False, "--pretty", help="Print a human-readable summary instead of JSON"
     ),
     max_repos: int = typer.Option(
-        50, "--max-repos", help="Cap on number of repos processed (API cost control)"
+        DEFAULT_MAX_REPOS, "--max-repos", help="Cap on number of repos processed (API cost control)"
     ),
 ):
     try:

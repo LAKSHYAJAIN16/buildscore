@@ -4,25 +4,19 @@ import statistics
 from datetime import datetime, timedelta, timezone
 
 from .models import BuilderStats, BuilderVector, RepoClassification
+from .variables import (
+    AMBITION_DIVERSITY_CAP,
+    AMBITION_DIVERSITY_PER_LANGUAGE,
+    AMBITION_LANGUAGE_BONUS,
+    AMBITION_SIZE_CAP,
+    AMBITION_SIZE_DIVISOR_KB,
+    AMBITIOUS_LANGUAGES,
+    DIMENSION_WEIGHTS,
+    ITERATION_RELEASE_MULTIPLIER,
+    VELOCITY_HALF_LIFE_DAYS,
+)
 
 SHIPPED_STAGES = {"shipped", "maintained"}
-
-DIMENSION_WEIGHTS = {
-    "velocity": 0.20,
-    "finishing": 0.20,
-    "iteration": 0.15,
-    "consistency": 0.10,
-    "ambition": 0.15,
-    "quality": 0.10,
-    "efficiency": 0.10,
-}
-
-# Rough placeholder for "technical ambition" until real architectural
-# analysis (Step 2 of the pipeline) exists: rewards systems-y languages,
-# language diversity, and repo size as crude proxies for difficulty.
-AMBITIOUS_LANGUAGES = {
-    "Rust", "Go", "C", "C++", "Elixir", "Erlang", "Scala", "Zig", "Haskell", "Kotlin",
-}
 
 
 def compute_stats(classifications: list[RepoClassification]) -> BuilderStats:
@@ -75,9 +69,13 @@ def _longest_streak(days: set) -> int:
 
 
 def _repo_ambition_score(repo) -> float:
-    lang_bonus = sum(20 for lang in repo.languages if lang in AMBITIOUS_LANGUAGES)
-    lang_diversity = min(30, len(repo.languages) * 6)
-    size_score = min(50, repo.size_kb / 200)
+    lang_bonus = sum(
+        AMBITION_LANGUAGE_BONUS for lang in repo.languages if lang in AMBITIOUS_LANGUAGES
+    )
+    lang_diversity = min(
+        AMBITION_DIVERSITY_CAP, len(repo.languages) * AMBITION_DIVERSITY_PER_LANGUAGE
+    )
+    size_score = min(AMBITION_SIZE_CAP, repo.size_kb / AMBITION_SIZE_DIVISOR_KB)
     return min(100.0, lang_bonus + lang_diversity + size_score)
 
 
@@ -87,13 +85,15 @@ def compute_vector(
     meaningful = [c for c in classifications if c.is_meaningful]
 
     velocity = (
-        100 / (1 + stats.median_time_to_ship_days / 14)
+        100 / (1 + stats.median_time_to_ship_days / VELOCITY_HALF_LIFE_DAYS)
         if stats.median_time_to_ship_days is not None
         else None
     )
     finishing = stats.completion_rate * 100 if stats.meaningful_projects else None
     iteration = (
-        min(100.0, stats.avg_releases_per_shipped * 20) if stats.shipped_projects else None
+        min(100.0, stats.avg_releases_per_shipped * ITERATION_RELEASE_MULTIPLIER)
+        if stats.shipped_projects
+        else None
     )
     consistency = min(100.0, stats.active_weeks_ratio * 100) if stats.meaningful_projects else None
     ambition = (

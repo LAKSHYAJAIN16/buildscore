@@ -7,11 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .github_client import GitHubClient
+from .variables import DRIFT_TOLERANCE
 
 STATE_FILE = Path.home() / ".buildscore" / "rate_limit_state.json"
-
-# Small slack for clock/measurement noise before treating a gap as suspicious.
-DRIFT_TOLERANCE = 5
 
 
 @dataclass

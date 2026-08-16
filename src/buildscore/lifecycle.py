@@ -3,10 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from .models import RepoClassification, RepoData
-
-MIN_COMMITS_FOR_MEANINGFUL = 3
-ACTIVE_DAYS = 60
-STALE_DAYS = 180
+from .variables import ACTIVE_DAYS, MIN_COMMITS_FOR_MEANINGFUL, STALE_DAYS
 
 
 def _days_since(dt: datetime, now: datetime) -> float:
