@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from .github_client import GitHubClient, MissingTokenError
+from .github_client import GitHubClient, MissingTokenError, RateLimitError
 from .lifecycle import classify_repo
 from .models import BuildscoreResult, Release, RepoData
 from .scoring import compute_score, compute_stats, compute_vector
@@ -72,19 +72,31 @@ def score(
         raise typer.Exit(1)
 
     now = datetime.now(timezone.utc)
+    raw_repos: list[dict] = []
+    classifications = []
     try:
         with console.status(f"Fetching repos for {username}..."):
             raw_repos = client.list_repos(username)
 
         raw_repos = [r for r in raw_repos if not r["fork"]][:max_repos]
 
-        classifications = []
         with console.status("Analyzing repos...") as status:
             for i, raw in enumerate(raw_repos, start=1):
                 status.update(f"Analyzing {raw['name']} ({i}/{len(raw_repos)})...")
                 repo_data = _fetch_repo_data(client, raw)
                 classifications.append(classify_repo(repo_data, now))
+    except RateLimitError as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        console.print(
+            f"Scored {len(classifications)}/{len(raw_repos)} repos before stopping. "
+            "Try again later, or pass a smaller --max-repos."
+        )
+        raise typer.Exit(1)
     finally:
+        remaining = client.rate_limit_remaining
+        limit = client.rate_limit_limit
+        if remaining is not None and limit is not None:
+            console.print(f"[dim]GitHub API calls remaining: {remaining}/{limit}[/dim]")
         client.close()
 
     stats = compute_stats(classifications)

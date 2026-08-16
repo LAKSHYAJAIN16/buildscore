@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import os
 import time
+from datetime import datetime, timezone
 
 import httpx
 
 GITHUB_API = "https://api.github.com"
 
+# Abort proactively instead of letting GitHub 403 us mid-run.
+RATE_LIMIT_SAFETY_MARGIN = 20
+
 
 class MissingTokenError(RuntimeError):
+    pass
+
+
+class RateLimitError(RuntimeError):
     pass
 
 
@@ -30,15 +38,46 @@ class GitHubClient:
             },
             timeout=30.0,
         )
+        self.rate_limit_limit: int | None = None
+        self.rate_limit_remaining: int | None = None
+        self.rate_limit_reset: datetime | None = None
 
     def close(self) -> None:
         self._client.close()
+
+    def _get(self, url: str, **kwargs) -> httpx.Response:
+        resp = self._client.get(url, **kwargs)
+        self._record_rate_limit(resp)
+        if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
+            reset = self.rate_limit_reset.isoformat() if self.rate_limit_reset else "unknown"
+            raise RateLimitError(f"GitHub API rate limit exhausted. Resets at {reset}.")
+        if (
+            self.rate_limit_remaining is not None
+            and self.rate_limit_remaining < RATE_LIMIT_SAFETY_MARGIN
+        ):
+            reset = self.rate_limit_reset.isoformat() if self.rate_limit_reset else "unknown"
+            raise RateLimitError(
+                f"Only {self.rate_limit_remaining} GitHub API calls left "
+                f"(stopping before hitting the limit). Resets at {reset}."
+            )
+        return resp
+
+    def _record_rate_limit(self, resp: httpx.Response) -> None:
+        limit = resp.headers.get("X-RateLimit-Limit")
+        remaining = resp.headers.get("X-RateLimit-Remaining")
+        reset = resp.headers.get("X-RateLimit-Reset")
+        if limit is not None:
+            self.rate_limit_limit = int(limit)
+        if remaining is not None:
+            self.rate_limit_remaining = int(remaining)
+        if reset is not None:
+            self.rate_limit_reset = datetime.fromtimestamp(int(reset), tz=timezone.utc)
 
     def list_repos(self, username: str) -> list[dict]:
         repos: list[dict] = []
         page = 1
         while True:
-            resp = self._client.get(
+            resp = self._get(
                 f"/users/{username}/repos",
                 params={"per_page": 100, "page": page, "type": "owner", "sort": "created"},
             )
@@ -51,12 +90,12 @@ class GitHubClient:
         return repos
 
     def list_releases(self, owner: str, repo: str) -> list[dict]:
-        resp = self._client.get(f"/repos/{owner}/{repo}/releases", params={"per_page": 100})
+        resp = self._get(f"/repos/{owner}/{repo}/releases", params={"per_page": 100})
         resp.raise_for_status()
         return resp.json()
 
     def languages(self, owner: str, repo: str) -> dict[str, int]:
-        resp = self._client.get(f"/repos/{owner}/{repo}/languages")
+        resp = self._get(f"/repos/{owner}/{repo}/languages")
         resp.raise_for_status()
         return resp.json()
 
@@ -64,7 +103,7 @@ class GitHubClient:
         # GitHub computes these stats asynchronously on first request and
         # returns 202 until the cache is warm.
         for attempt in range(5):
-            resp = self._client.get(f"/repos/{owner}/{repo}/stats/commit_activity")
+            resp = self._get(f"/repos/{owner}/{repo}/stats/commit_activity")
             if resp.status_code == 202:
                 time.sleep(2 * (attempt + 1))
                 continue
