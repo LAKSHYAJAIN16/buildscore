@@ -1,0 +1,179 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from .github_client import GitHubClient, MissingTokenError
+from .lifecycle import classify_repo
+from .models import BuildscoreResult, Release, RepoData
+from .scoring import compute_score, compute_stats, compute_vector
+
+app = typer.Typer(add_completion=False)
+console = Console()
+
+
+def _parse_dt(s: str) -> datetime:
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
+    owner = raw_repo["owner"]["login"]
+    name = raw_repo["name"]
+
+    releases_raw = client.list_releases(owner, name)
+    releases = sorted(
+        (
+            Release(published_at=_parse_dt(r["published_at"]))
+            for r in releases_raw
+            if r.get("published_at")
+        ),
+        key=lambda r: r.published_at,
+    )
+
+    languages = client.languages(owner, name)
+    weekly_activity = client.commit_activity(owner, name)
+    commit_count_estimate = sum(week.get("total", 0) for week in weekly_activity)
+
+    return RepoData(
+        name=name,
+        full_name=raw_repo["full_name"],
+        created_at=_parse_dt(raw_repo["created_at"]),
+        pushed_at=_parse_dt(raw_repo["pushed_at"]),
+        is_fork=raw_repo["fork"],
+        is_archived=raw_repo["archived"],
+        size_kb=raw_repo["size"],
+        stargazers_count=raw_repo["stargazers_count"],
+        languages=languages,
+        releases=releases,
+        commit_count_estimate=commit_count_estimate,
+        weekly_commit_activity=weekly_activity,
+    )
+
+
+@app.command()
+def score(
+    username: str,
+    token: str = typer.Option(None, "--token", envvar="GITHUB_TOKEN"),
+    pretty: bool = typer.Option(
+        False, "--pretty", help="Print a human-readable summary instead of JSON"
+    ),
+    max_repos: int = typer.Option(
+        50, "--max-repos", help="Cap on number of repos processed (API cost control)"
+    ),
+):
+    try:
+        client = GitHubClient(token=token)
+    except MissingTokenError as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+    now = datetime.now(timezone.utc)
+    try:
+        with console.status(f"Fetching repos for {username}..."):
+            raw_repos = client.list_repos(username)
+
+        raw_repos = [r for r in raw_repos if not r["fork"]][:max_repos]
+
+        classifications = []
+        with console.status("Analyzing repos...") as status:
+            for i, raw in enumerate(raw_repos, start=1):
+                status.update(f"Analyzing {raw['name']} ({i}/{len(raw_repos)})...")
+                repo_data = _fetch_repo_data(client, raw)
+                classifications.append(classify_repo(repo_data, now))
+    finally:
+        client.close()
+
+    stats = compute_stats(classifications)
+    vector = compute_vector(stats, classifications)
+    buildscore = compute_score(vector)
+
+    result = BuildscoreResult(
+        username=username,
+        generated_at=now,
+        stats=stats,
+        vector=vector,
+        score=round(buildscore, 1),
+        repos=classifications,
+    )
+
+    if pretty:
+        _print_pretty(result)
+    else:
+        console.print_json(json.dumps(_serialize(result)))
+
+
+def _print_pretty(result: BuildscoreResult) -> None:
+    console.print(f"\n[bold]Buildscore for {result.username}[/bold]: {result.score}/100\n")
+
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Dimension")
+    table.add_column("Score", justify="right")
+    for label, value in [
+        ("Shipping Velocity", result.vector.velocity),
+        ("Completion", result.vector.finishing),
+        ("Iteration", result.vector.iteration),
+        ("Consistency", result.vector.consistency),
+        ("Technical Ambition", result.vector.ambition),
+    ]:
+        table.add_row(label, f"{value:.0f}" if value is not None else "n/a")
+    console.print(table)
+
+    s = result.stats
+    console.print(f"\nProjects started: {s.projects_started}")
+    console.print(f"Meaningful projects: {s.meaningful_projects}")
+    console.print(f"Shipped: {s.shipped_projects}")
+    console.print(f"Completion rate: {s.completion_rate:.0%}")
+    console.print(f"Graveyard rate: {s.graveyard_rate:.0%}")
+    if s.median_time_to_ship_days is not None:
+        console.print(f"Median time-to-ship: {s.median_time_to_ship_days:.1f} days")
+    else:
+        console.print("Median time-to-ship: n/a")
+    console.print(f"Longest commit streak: {s.longest_streak_days} days")
+    console.print()
+
+
+def _serialize(result: BuildscoreResult) -> dict:
+    return {
+        "username": result.username,
+        "generated_at": result.generated_at.isoformat(),
+        "score": result.score,
+        "vector": {
+            "velocity": result.vector.velocity,
+            "finishing": result.vector.finishing,
+            "iteration": result.vector.iteration,
+            "consistency": result.vector.consistency,
+            "ambition": result.vector.ambition,
+            "quality": result.vector.quality,
+            "ai_leverage": result.vector.ai_leverage,
+            "efficiency": result.vector.efficiency,
+        },
+        "stats": {
+            "projects_started": result.stats.projects_started,
+            "meaningful_projects": result.stats.meaningful_projects,
+            "shipped_projects": result.stats.shipped_projects,
+            "completion_rate": result.stats.completion_rate,
+            "graveyard_rate": result.stats.graveyard_rate,
+            "median_time_to_ship_days": result.stats.median_time_to_ship_days,
+            "active_weeks_ratio": result.stats.active_weeks_ratio,
+            "longest_streak_days": result.stats.longest_streak_days,
+            "avg_releases_per_shipped": result.stats.avg_releases_per_shipped,
+        },
+        "repos": [
+            {
+                "name": c.repo.name,
+                "stage": c.stage,
+                "is_meaningful": c.is_meaningful,
+                "time_to_ship_days": c.time_to_ship_days,
+                "stars": c.repo.stargazers_count,
+            }
+            for c in result.repos
+        ],
+    }
+
+
+if __name__ == "__main__":
+    app()
