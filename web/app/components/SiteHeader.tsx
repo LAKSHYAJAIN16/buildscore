@@ -12,7 +12,14 @@ export function SiteHeader() {
           <span className="flex size-6 items-center justify-center rounded-md bg-foreground text-xs font-bold text-background">
             B
           </span>
-          <span className="text-sm font-semibold tracking-tight">Buildscore</span>
+          <span className="font-condensed text-base font-semibold tracking-tight">
+            Buildscore
+          </span>
+          <span className="ml-0.5 flex items-center gap-1" aria-hidden>
+            <span className="size-1.5 rounded-full bg-sector-purple" />
+            <span className="size-1.5 rounded-full bg-sector-green" />
+            <span className="size-1.5 rounded-full bg-sector-amber" />
+          </span>
         </Link>
 
         <div className="flex items-center gap-1.5">

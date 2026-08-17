@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { SiteHeader } from "./components/SiteHeader";
 import { SiteFooter } from "./components/SiteFooter";
-import { ScorePreview } from "./components/ScorePreview";
+import { SplitBoard } from "./components/SplitBoard";
 import { HowItWorks } from "./components/HowItWorks";
 import { CopyCommand } from "./components/CopyCommand";
 
@@ -33,7 +33,7 @@ function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) 
       transition={{ duration: 0.6, ease: EASE }}
       className="flex flex-col items-center gap-2 text-center"
     >
-      <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <span className="font-condensed text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {eyebrow}
       </span>
       <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h2>
@@ -55,7 +55,7 @@ export default function Home() {
       <SiteHeader />
 
       <main className="flex flex-1 flex-col items-center">
-        <section className="flex w-full flex-col items-center px-6 pb-20 pt-20 text-center sm:pt-28">
+        <section className="flex w-full flex-col items-center px-6 pb-16 pt-16 text-center sm:pt-24">
           <motion.div initial="hidden" animate="visible" custom={0} variants={fadeUp}>
             <Badge variant="outline" className="gap-1.5 py-1 text-muted-foreground">
               <Sparkles className="size-3" />
@@ -105,7 +105,7 @@ export default function Home() {
             />
             <ShimmerButton
               type="submit"
-              background="#18181b"
+              background="linear-gradient(135deg, var(--sector-purple), oklch(0.4 0.16 300))"
               className="h-11 gap-1.5 px-6 text-sm font-medium shadow-lg shadow-black/10"
             >
               Get your score
@@ -137,12 +137,12 @@ export default function Home() {
           )}
         </section>
 
-        <section className="flex w-full flex-col items-center gap-10 px-6 py-20">
+        <section className="flex w-full flex-col items-center gap-8 px-6 pb-20">
           <SectionHeading
             eyebrow="What you get"
             title="A Builder Vector, not a leaderboard number"
           />
-          <ScorePreview />
+          <SplitBoard />
         </section>
 
         <section className="flex w-full flex-col items-center gap-10 px-6 py-20">
