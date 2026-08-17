@@ -109,6 +109,21 @@ class GitHubClient:
     def commit_activity(self, owner: str, repo: str) -> list[dict]:
         return self._get_stats(f"/repos/{owner}/{repo}/stats/commit_activity")
 
+    def repo_root_contents(self, owner: str, repo: str) -> list[str]:
+        """Top-level file/directory names in the repo's default branch --
+        one cheap call, shared by the quality and AI-leverage heuristics
+        (tests/CI/license presence, AI tool config files)."""
+        resp = self._get(f"/repos/{owner}/{repo}/contents")
+        resp.raise_for_status()
+        return [entry["name"] for entry in resp.json()]
+
+    def list_recent_commits(self, owner: str, repo: str, limit: int) -> list[str]:
+        """Commit messages for the most recent `limit` commits on the
+        default branch -- used to detect AI co-authorship signals."""
+        resp = self._get(f"/repos/{owner}/{repo}/commits", params={"per_page": limit})
+        resp.raise_for_status()
+        return [c["commit"]["message"] for c in resp.json()]
+
     def code_frequency(self, owner: str, repo: str) -> list[list[int]]:
         return self._get_stats(f"/repos/{owner}/{repo}/stats/code_frequency")
 

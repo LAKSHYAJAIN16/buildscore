@@ -19,6 +19,11 @@ export const reposCache = pgTable("repos_cache", {
     .notNull()
     .$type<{ days: number[]; total: number; week: number }[]>(),
   codeFrequency: jsonb("code_frequency").notNull().$type<number[][]>(),
+  // Root-listing + recent commit messages, shared by the quality and
+  // AI-leverage heuristics. Cached alongside everything else so a cache hit
+  // (pushedAt unchanged) doesn't silently lose these dimensions.
+  rootEntries: jsonb("root_entries").notNull().$type<string[]>(),
+  recentCommitMessages: jsonb("recent_commit_messages").notNull().$type<string[]>(),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

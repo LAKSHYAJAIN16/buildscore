@@ -17,6 +17,7 @@ from .variables import (
     ACTIVENESS_LABEL_ACTIVE,
     ACTIVENESS_LABEL_COOLING,
     ACTIVENESS_LABEL_THRIVING,
+    AI_COMMIT_SAMPLE_SIZE,
     DEFAULT_MAX_REPOS,
 )
 
@@ -42,13 +43,15 @@ def _base_repo_data(raw_repo: dict, **overrides) -> RepoData:
         "releases": [],
         "weekly_commit_activity": [],
         "code_frequency": [],
+        "root_entries": [],
+        "recent_commit_messages": [],
     }
     fields.update(overrides)
     return RepoData(**fields)
 
 
 def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
-    # Repos too small/trivial to be worth the ~4 extra API calls are
+    # Repos too small/trivial to be worth the ~6 extra API calls are
     # scored 0 directly, without ever touching the network for them.
     if not is_repo_worth_full_analysis(raw_repo["size"], raw_repo["fork"]):
         return _base_repo_data(raw_repo)
@@ -69,6 +72,8 @@ def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
     languages = client.languages(owner, name)
     weekly_activity = client.commit_activity(owner, name)
     code_freq = client.code_frequency(owner, name)
+    root_entries = client.repo_root_contents(owner, name)
+    recent_commit_messages = client.list_recent_commits(owner, name, AI_COMMIT_SAMPLE_SIZE)
 
     return _base_repo_data(
         raw_repo,
@@ -76,6 +81,8 @@ def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
         releases=releases,
         weekly_commit_activity=weekly_activity,
         code_frequency=code_freq,
+        root_entries=root_entries,
+        recent_commit_messages=recent_commit_messages,
     )
 
 
@@ -170,6 +177,8 @@ def _print_pretty(result: BuildscoreResult) -> None:
         ("Iteration", result.vector.iteration),
         ("Consistency", result.vector.consistency),
         ("Technical Ambition", result.vector.ambition),
+        ("Quality", result.vector.quality),
+        ("AI Leverage", result.vector.ai_leverage),
     ]:
         table.add_row(label, f"{value:.0f}" if value is not None else "n/a")
     console.print(table)

@@ -120,6 +120,25 @@ export class GitHubClient {
     return this._getStats(`/repos/${owner}/${repo}/stats/code_frequency`) as Promise<number[][]>;
   }
 
+  // Top-level file/directory names in the repo's default branch -- one
+  // cheap call, shared by the quality and AI-leverage heuristics
+  // (tests/CI/license presence, AI tool config files).
+  async repoRootContents(owner: string, repo: string): Promise<string[]> {
+    const resp = await this._get(`/repos/${owner}/${repo}/contents`);
+    if (!resp.ok) throw new Error(`GitHub contents failed: ${resp.status}`);
+    const body = (await resp.json()) as { name: string }[];
+    return body.map((entry) => entry.name);
+  }
+
+  // Commit messages for the most recent `limit` commits on the default
+  // branch -- used to detect AI co-authorship signals.
+  async listRecentCommits(owner: string, repo: string, limit: number): Promise<string[]> {
+    const resp = await this._get(`/repos/${owner}/${repo}/commits`, { per_page: limit });
+    if (!resp.ok) throw new Error(`GitHub commits failed: ${resp.status}`);
+    const body = (await resp.json()) as { commit: { message: string } }[];
+    return body.map((c) => c.commit.message);
+  }
+
   // GitHub computes these stats asynchronously on first request and returns
   // 202 until the cache is warm.
   private async _getStats(path: string): Promise<unknown[]> {

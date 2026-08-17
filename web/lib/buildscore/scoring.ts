@@ -3,6 +3,9 @@
 import type { BuilderStats, BuilderVector, RepoClassification, RepoData } from "./models";
 import {
   ACTIVENESS_GRAVEYARD_THRESHOLD,
+  AI_CONFIG_FILENAMES,
+  AI_LEVERAGE_COMMIT_WEIGHT,
+  AI_LEVERAGE_CONFIG_POINTS,
   AMBITIOUS_LANGUAGES,
   AMBITION_DIVERSITY_CAP,
   AMBITION_DIVERSITY_PER_LANGUAGE,
@@ -11,8 +14,26 @@ import {
   AMBITION_SIZE_DIVISOR_KB,
   DIMENSION_WEIGHTS,
   ITERATION_RELEASE_MULTIPLIER,
+  QUALITY_CI_INDICATORS,
+  QUALITY_LICENSE_NAMES,
+  QUALITY_STABILITY_CV_CEILING,
+  QUALITY_STABILITY_WEIGHT,
+  QUALITY_STRUCTURE_CI_POINTS,
+  QUALITY_STRUCTURE_LICENSE_POINTS,
+  QUALITY_STRUCTURE_TEST_POINTS,
+  QUALITY_STRUCTURE_WEIGHT,
+  QUALITY_TEST_DIR_NAMES,
   VELOCITY_HALF_LIFE_DAYS,
 } from "./variables";
+
+function hasAny(entries: string[], set: Set<string>): boolean {
+  return entries.some((e) => set.has(e));
+}
+
+function populationStdev(values: number[]): number {
+  const m = mean(values);
+  return Math.sqrt(mean(values.map((v) => (v - m) ** 2)));
+}
 
 function mean(values: number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
@@ -90,6 +111,49 @@ function repoAmbitionScore(repo: RepoData): number {
   return Math.min(100, langBonus + langDiversity + sizeScore);
 }
 
+// 100 for dead-steady week-to-week churn, decaying toward 0 as the
+// coefficient of variation grows -- erratic spikes (one huge commit, long
+// silences) score lower than a consistent trickle of work, even at the same
+// total volume.
+function churnStabilityScore(codeFrequency: number[][]): number {
+  const churns = codeFrequency.map(([, additions, deletions]) => additions + Math.abs(deletions));
+  const active = churns.filter((c) => c > 0);
+  if (active.length < 2) return 50; // not enough signal to call it stable or erratic
+
+  const m = mean(active);
+  if (m === 0) return 50;
+
+  const cv = populationStdev(active) / m;
+  return 100 * Math.max(0, 1 - Math.min(cv, QUALITY_STABILITY_CV_CEILING) / QUALITY_STABILITY_CV_CEILING);
+}
+
+function repoQualityScore(repo: RepoData): number {
+  const structurePoints =
+    (hasAny(repo.rootEntries, QUALITY_TEST_DIR_NAMES) ? QUALITY_STRUCTURE_TEST_POINTS : 0) +
+    (hasAny(repo.rootEntries, QUALITY_CI_INDICATORS) ? QUALITY_STRUCTURE_CI_POINTS : 0) +
+    (hasAny(repo.rootEntries, QUALITY_LICENSE_NAMES) ? QUALITY_STRUCTURE_LICENSE_POINTS : 0);
+  const structureScore = Math.min(100, structurePoints);
+  const stabilityScore = churnStabilityScore(repo.codeFrequency);
+
+  return structureScore * QUALITY_STRUCTURE_WEIGHT + stabilityScore * QUALITY_STABILITY_WEIGHT;
+}
+
+const AI_COMMIT_PATTERN =
+  /co-authored-by:\s*.*(claude|copilot|chatgpt|gpt-4|cursor|codeium|devin|windsurf)/i;
+
+function repoAiLeverageScore(repo: RepoData): number {
+  const hasAiConfig = hasAny(repo.rootEntries, AI_CONFIG_FILENAMES);
+  const configPoints = hasAiConfig ? AI_LEVERAGE_CONFIG_POINTS : 0;
+
+  const messages = repo.recentCommitMessages;
+  const aiCommitFraction = messages.length
+    ? messages.filter((m) => AI_COMMIT_PATTERN.test(m)).length / messages.length
+    : 0;
+  const commitPoints = AI_LEVERAGE_COMMIT_WEIGHT * aiCommitFraction;
+
+  return Math.min(100, configPoints + commitPoints);
+}
+
 export function computeVector(
   stats: BuilderStats,
   classifications: RepoClassification[]
@@ -108,6 +172,12 @@ export function computeVector(
   const ambition = meaningful.length
     ? mean(meaningful.map((c) => repoAmbitionScore(c.repo)))
     : null;
+  const quality = meaningful.length
+    ? mean(meaningful.map((c) => repoQualityScore(c.repo)))
+    : null;
+  const aiLeverage = meaningful.length
+    ? mean(meaningful.map((c) => repoAiLeverageScore(c.repo)))
+    : null;
 
   return {
     velocity,
@@ -115,8 +185,8 @@ export function computeVector(
     iteration,
     consistency,
     ambition,
-    quality: null,
-    aiLeverage: null,
+    quality,
+    aiLeverage,
     efficiency: null,
   };
 }
@@ -129,6 +199,7 @@ export function computeScore(vector: BuilderVector): number {
     consistency: vector.consistency,
     ambition: vector.ambition,
     quality: vector.quality,
+    aiLeverage: vector.aiLeverage,
     efficiency: vector.efficiency,
   };
   const available = Object.entries(values).filter(

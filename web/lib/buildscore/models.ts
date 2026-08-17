@@ -17,6 +17,8 @@ export interface RepoData {
   releases: Release[];
   weeklyCommitActivity: CommitActivityWeek[];
   codeFrequency: number[][];
+  rootEntries: string[];
+  recentCommitMessages: string[];
 }
 
 export interface CommitActivityWeek {

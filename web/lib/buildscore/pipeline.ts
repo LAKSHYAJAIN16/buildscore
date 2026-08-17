@@ -14,7 +14,13 @@ import type { RawGithubRepo, RepoClassification, RepoData } from "./models";
 import { computeScore, computeStats, computeVector } from "./scoring";
 import { checkForSuspiciousDrift } from "./security";
 import { serializeResult } from "./serialize";
-import { CONCURRENT_REPO_FETCHES, SCAN_ABSOLUTE_TIMEOUT_MINUTES, SCAN_CHUNK_TIME_BUDGET_MS, SCAN_MAX_REPOS } from "./variables";
+import {
+  AI_COMMIT_SAMPLE_SIZE,
+  CONCURRENT_REPO_FETCHES,
+  SCAN_ABSOLUTE_TIMEOUT_MINUTES,
+  SCAN_CHUNK_TIME_BUDGET_MS,
+  SCAN_MAX_REPOS,
+} from "./variables";
 import { getCachedRepo, upsertCachedRepo } from "./db/repos-cache";
 import {
   getUserScore,
@@ -39,6 +45,8 @@ function baseRepoData(raw: RawGithubRepo, overrides?: Partial<RepoData>): RepoDa
     releases: [],
     weeklyCommitActivity: [],
     codeFrequency: [],
+    rootEntries: [],
+    recentCommitMessages: [],
     ...overrides,
   };
 }
@@ -48,7 +56,7 @@ async function getOrFetchRepoData(
   raw: RawGithubRepo
 ): Promise<RepoData> {
   if (!isRepoWorthFullAnalysis(raw.size, raw.fork)) {
-    // Repos too small/trivial to be worth the ~4 extra API calls are scored
+    // Repos too small/trivial to be worth the ~6 extra API calls are scored
     // 0 directly, without ever touching the network or the cache for them.
     return baseRepoData(raw);
   }
@@ -58,7 +66,7 @@ async function getOrFetchRepoData(
   const pushedAt = new Date(raw.pushed_at);
 
   if (cached && cached.pushedAt.getTime() === pushedAt.getTime()) {
-    // Unchanged since we last saw it -- skip all 4 extra GitHub calls.
+    // Unchanged since we last saw it -- skip all 6 extra GitHub calls.
     return baseRepoData(raw, {
       languages: cached.languages,
       releases: cached.releases.filter(
@@ -66,17 +74,22 @@ async function getOrFetchRepoData(
       ),
       weeklyCommitActivity: cached.weeklyCommitActivity,
       codeFrequency: cached.codeFrequency,
+      rootEntries: cached.rootEntries,
+      recentCommitMessages: cached.recentCommitMessages,
     });
   }
 
   const owner = raw.owner.login;
   const name = raw.name;
-  const [releasesRaw, languages, weeklyCommitActivity, codeFrequency] = await Promise.all([
-    client.listReleases(owner, name),
-    client.languages(owner, name),
-    client.commitActivity(owner, name),
-    client.codeFrequency(owner, name),
-  ]);
+  const [releasesRaw, languages, weeklyCommitActivity, codeFrequency, rootEntries, recentCommitMessages] =
+    await Promise.all([
+      client.listReleases(owner, name),
+      client.languages(owner, name),
+      client.commitActivity(owner, name),
+      client.codeFrequency(owner, name),
+      client.repoRootContents(owner, name),
+      client.listRecentCommits(owner, name, AI_COMMIT_SAMPLE_SIZE),
+    ]);
 
   const releases = releasesRaw
     .filter((r) => r.published_at)
@@ -100,6 +113,8 @@ async function getOrFetchRepoData(
     releases,
     weeklyCommitActivity: weeklyCommitActivity as RepoData["weeklyCommitActivity"],
     codeFrequency,
+    rootEntries,
+    recentCommitMessages,
   });
 
   return baseRepoData(raw, {
@@ -107,6 +122,8 @@ async function getOrFetchRepoData(
     releases,
     weeklyCommitActivity: weeklyCommitActivity as RepoData["weeklyCommitActivity"],
     codeFrequency,
+    rootEntries,
+    recentCommitMessages,
   });
 }
 

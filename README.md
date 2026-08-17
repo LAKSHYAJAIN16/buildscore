@@ -2,12 +2,11 @@
 
 Heuristic v0 of the Buildscore pipeline. Given a GitHub username, fetches their
 public repos and computes a Builder Vector (velocity, finishing, iteration,
-consistency, ambition) and an overall Buildscore, using GitHub API metadata
-only — no semantic diff/AST analysis yet (that's phase 2).
+consistency, ambition, quality, ai_leverage) and an overall Buildscore, using
+GitHub API metadata only — no semantic diff/AST analysis yet (that's phase 2).
 
-`quality`, `ai_leverage`, and `efficiency` are not computed in this version
-and show up as `null`; the final score is renormalized across whichever
-dimensions are available.
+`efficiency` is not computed in this version and shows up as `null`; the final
+score is renormalized across whichever dimensions are available.
 
 ## Setup
 
@@ -41,6 +40,11 @@ buildscore <github-username> --max-repos 30
   recent activity, not full account history.
 - "Technical ambition" is a crude proxy based on repo size and language mix,
   not real architectural analysis. Treat it as a placeholder.
+- "Quality" and "AI leverage" are also v0 heuristics, not real code review or
+  AI-authorship detection: quality blends repo-structure signals (tests/CI/
+  license presence) with commit-churn stability; AI leverage blends known AI
+  tool config files with a sample of recent commit messages for AI
+  co-authorship trailers. Both are proxies, not ground truth.
 - Forks are excluded entirely; private repos aren't visible without a
   different auth flow.
 - No percentile normalization yet — there's no population to compare against.

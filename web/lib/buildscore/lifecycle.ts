@@ -11,7 +11,7 @@ import {
 } from "./variables";
 
 /** Cheap, zero-API-call gate using data already in the bulk repo listing --
- * decides whether a repo is worth spending the ~4 extra API calls on, or is
+ * decides whether a repo is worth spending the ~6 extra API calls on, or is
  * trivial/empty and can be scored 0 directly. */
 export function isRepoWorthFullAnalysis(sizeKb: number, isFork: boolean): boolean {
   return !isFork && sizeKb > SMALL_REPO_SIZE_KB_THRESHOLD;

@@ -10,6 +10,8 @@ export interface CachedRepo {
   releases: { publishedAt: Date | null }[];
   weeklyCommitActivity: RepoData["weeklyCommitActivity"];
   codeFrequency: number[][];
+  rootEntries: string[];
+  recentCommitMessages: string[];
 }
 
 export async function getCachedRepo(fullName: string): Promise<CachedRepo | null> {
@@ -26,6 +28,8 @@ export async function getCachedRepo(fullName: string): Promise<CachedRepo | null
     releases: row.releases.map((r) => ({ publishedAt: r.publishedAt ? new Date(r.publishedAt) : null })),
     weeklyCommitActivity: row.weeklyCommitActivity,
     codeFrequency: row.codeFrequency,
+    rootEntries: row.rootEntries,
+    recentCommitMessages: row.recentCommitMessages,
   };
 }
 
@@ -43,6 +47,8 @@ export interface UpsertCachedRepoInput {
   releases: { publishedAt: Date | null }[];
   weeklyCommitActivity: RepoData["weeklyCommitActivity"];
   codeFrequency: number[][];
+  rootEntries: string[];
+  recentCommitMessages: string[];
 }
 
 export async function upsertCachedRepo(input: UpsertCachedRepoInput): Promise<void> {
@@ -60,6 +66,8 @@ export async function upsertCachedRepo(input: UpsertCachedRepoInput): Promise<vo
     releases: input.releases.map((r) => ({ publishedAt: r.publishedAt?.toISOString() ?? null })),
     weeklyCommitActivity: input.weeklyCommitActivity,
     codeFrequency: input.codeFrequency,
+    rootEntries: input.rootEntries,
+    recentCommitMessages: input.recentCommitMessages,
     updatedAt: new Date(),
   };
 

@@ -23,6 +23,8 @@ class RepoData:
     releases: list[Release]
     weekly_commit_activity: list[dict]
     code_frequency: list[list[int]]
+    root_entries: list[str]
+    recent_commit_messages: list[str]
 
 
 @dataclass

@@ -79,15 +79,19 @@ export const ACTIVENESS_LABEL_COOLING = 15;
 
 // Weighted contribution of each Builder Vector dimension to the final
 // score. Dimensions with no computed value are excluded and the rest
-// renormalized (see computeScore). ai_leverage has no weight yet since it
-// isn't computed in v0 -- matches the Python DIMENSION_WEIGHTS exactly.
+// renormalized (see computeScore). efficiency has no meaningful signal yet
+// (needs the semantic-diff pipeline) and stays unweighted in spirit even
+// though it carries a nominal weight below -- it's always null so
+// computeScore always renormalizes it away. Matches the Python
+// DIMENSION_WEIGHTS exactly.
 export const DIMENSION_WEIGHTS: Record<string, number> = {
-  velocity: 0.2,
-  finishing: 0.2,
-  iteration: 0.15,
+  velocity: 0.18,
+  finishing: 0.18,
+  iteration: 0.12,
   consistency: 0.1,
-  ambition: 0.15,
+  ambition: 0.12,
   quality: 0.1,
+  aiLeverage: 0.1,
   efficiency: 0.1,
 };
 
@@ -120,6 +124,54 @@ export const AMBITION_DIVERSITY_PER_LANGUAGE = 6;
 export const AMBITION_SIZE_CAP = 50; // max contribution from repo size
 export const AMBITION_SIZE_DIVISOR_KB = 200; // size_kb / this = size contribution
 
+// --- Quality (scoring.ts) ---
+//
+// v0 heuristic, not real code review: blends repo-structure signals
+// (tests/CI/license presence, from one root contents() call shared with the
+// AI-leverage check below) with churn stability (steady week-to-week work
+// vs. erratic spikes, from codeFrequency -- already fetched for activeness,
+// zero extra cost). Matches src/buildscore/variables.py exactly.
+
+export const QUALITY_TEST_DIR_NAMES = new Set(["tests", "test", "__tests__", "spec"]);
+export const QUALITY_CI_INDICATORS = new Set([
+  ".github",
+  ".gitlab-ci.yml",
+  ".circleci",
+  "azure-pipelines.yml",
+]);
+export const QUALITY_LICENSE_NAMES = new Set(["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING"]);
+
+export const QUALITY_STRUCTURE_WEIGHT = 0.6;
+export const QUALITY_STABILITY_WEIGHT = 0.4;
+export const QUALITY_STRUCTURE_TEST_POINTS = 45;
+export const QUALITY_STRUCTURE_CI_POINTS = 35;
+export const QUALITY_STRUCTURE_LICENSE_POINTS = 20;
+
+// Coefficient of variation (population stddev / mean) of weekly churn at or
+// above this is treated as maximally erratic -- stability score floors at 0
+// rather than going negative.
+export const QUALITY_STABILITY_CV_CEILING = 2.0;
+
+// --- AI Leverage (scoring.ts) ---
+//
+// v0 heuristic: presence of known AI coding-tool config/rule files (same
+// root contents() call as quality's structure check, zero extra cost)
+// blended with the fraction of recently sampled commits carrying an AI
+// co-authorship signal. Deliberately NOT "generated-code survival after N
+// days" -- that needs blame-diffing over time and is real semantic-analysis
+// territory (phase 2), not a v0 heuristic.
+
+export const AI_CONFIG_FILENAMES = new Set([
+  "AGENTS.md",
+  "CLAUDE.md",
+  ".cursorrules",
+  ".windsurfrules",
+  ".aider.conf.yml",
+]);
+export const AI_COMMIT_SAMPLE_SIZE = 50; // most recent commits sampled per repo, one API call
+export const AI_LEVERAGE_CONFIG_POINTS = 40; // flat bonus if any AI config file is present
+export const AI_LEVERAGE_COMMIT_WEIGHT = 60; // scaled by fraction of sampled commits with an AI signal
+
 // --- Web-only: scan orchestration (pipeline.ts, api/scan/*) ---
 //
 // The CLI runs one scan at a time, synchronously, with no duration limit.
@@ -137,7 +189,7 @@ export const SCAN_MAX_REPOS = 150;
 export const SCAN_CHUNK_TIME_BUDGET_MS = 40_000;
 
 // How many repos to fetch concurrently within a chunk. Also used as the
-// concurrency for a single repo's own 4 sub-resource calls.
+// concurrency for a single repo's own 6 sub-resource calls.
 export const CONCURRENT_REPO_FETCHES = 4;
 
 // Per-IP rate limit on POST /api/scan (the expensive, mutating endpoint).

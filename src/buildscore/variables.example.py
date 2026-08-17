@@ -87,15 +87,18 @@ ACTIVENESS_LABEL_COOLING = 15
 
 # Weighted contribution of each Builder Vector dimension to the final
 # score. Dimensions with no computed value are excluded and the rest
-# renormalized (see compute_score). `ai_leverage` has no weight yet
-# since it isn't computed in v0.
+# renormalized (see compute_score). `efficiency` has no meaningful
+# signal yet (needs the semantic-diff pipeline) and stays unweighted
+# in spirit even though it carries a nominal weight below -- it's
+# always None so compute_score always renormalizes it away.
 DIMENSION_WEIGHTS = {
-    "velocity": 0.20,
-    "finishing": 0.20,
-    "iteration": 0.15,
+    "velocity": 0.18,
+    "finishing": 0.18,
+    "iteration": 0.12,
     "consistency": 0.10,
-    "ambition": 0.15,
+    "ambition": 0.12,
     "quality": 0.10,
+    "ai_leverage": 0.10,
     "efficiency": 0.10,
 }
 
@@ -118,3 +121,40 @@ AMBITION_DIVERSITY_CAP = 30  # max contribution from language count
 AMBITION_DIVERSITY_PER_LANGUAGE = 6
 AMBITION_SIZE_CAP = 50  # max contribution from repo size
 AMBITION_SIZE_DIVISOR_KB = 200  # size_kb / this = size contribution
+
+# --- Quality (scoring.py) ---
+#
+# v0 heuristic, not real code review: blends repo-structure signals
+# (tests/CI/license presence, from one root contents() call already
+# shared with the AI-leverage check below) with churn stability (steady
+# week-to-week work vs. erratic spikes, from code_frequency -- already
+# fetched for activeness, zero extra cost).
+
+QUALITY_TEST_DIR_NAMES = {"tests", "test", "__tests__", "spec"}
+QUALITY_CI_INDICATORS = {".github", ".gitlab-ci.yml", ".circleci", "azure-pipelines.yml"}
+QUALITY_LICENSE_NAMES = {"LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING"}
+
+QUALITY_STRUCTURE_WEIGHT = 0.6
+QUALITY_STABILITY_WEIGHT = 0.4
+QUALITY_STRUCTURE_TEST_POINTS = 45
+QUALITY_STRUCTURE_CI_POINTS = 35
+QUALITY_STRUCTURE_LICENSE_POINTS = 20
+
+# Coefficient of variation (population stddev / mean) of weekly churn at
+# or above this is treated as maximally erratic -- stability score
+# floors at 0 rather than going negative.
+QUALITY_STABILITY_CV_CEILING = 2.0
+
+# --- AI Leverage (scoring.py) ---
+#
+# v0 heuristic: presence of known AI coding-tool config/rule files
+# (same root contents() call as quality's structure check, zero extra
+# cost) blended with the fraction of recently sampled commits carrying
+# an AI co-authorship signal. Deliberately NOT "generated-code survival
+# after N days" -- that needs blame-diffing over time and is real
+# semantic-analysis territory (phase 2), not a v0 heuristic.
+
+AI_CONFIG_FILENAMES = {"AGENTS.md", "CLAUDE.md", ".cursorrules", ".windsurfrules", ".aider.conf.yml"}
+AI_COMMIT_SAMPLE_SIZE = 50  # most recent commits sampled per repo, one API call
+AI_LEVERAGE_CONFIG_POINTS = 40  # flat bonus if any AI config file is present
+AI_LEVERAGE_COMMIT_WEIGHT = 60  # scaled by fraction of sampled commits with an AI signal
