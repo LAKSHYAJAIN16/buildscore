@@ -30,8 +30,14 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (.env.example is the committed template, kept out of this list)
+.env
+.env.local
+.env.*.local
+
+# tunable scoring heuristics -- gitignored so exact thresholds aren't public
+# (raises the bar against gaming the score); see variables.example.ts
+lib/buildscore/variables.ts
 
 # vercel
 .vercel
