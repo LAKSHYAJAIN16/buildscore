@@ -2,88 +2,90 @@
 
 <!-- impeccable:design-doc -->
 
-## World: Live Timing Tower — Rainbow Splits
+## World: The Friend In Your Texts (folk.com-referenced)
 
-The Builder Vector reads like a motorsport live-timing screen: sectors, splits, count-up
-reveals. Structurally unchanged from the first pass, but the color system was rejected by the
-user (explicitly: no purple, and the neutral-ground-with-accent-dots approach still read as
-"black and white") and rebuilt as a genuine seven-hue rainbow, one real color per dimension,
-filling actual surface area — chips, bars, numerals, background wash — not thin accent lines
-on a near-neutral ground.
+Buildscore reads like a friend texting your own stats back to you — warm, confident, a
+little chaotic — not a dashboard, not an instrument panel. This replaced two prior passes
+(a motorsport "live timing tower" and an architectural blueprint) that both read as
+competent-but-generic dev-tool registers; the user pointed at **folk.com** directly as the
+brief, and this build matches that reference rather than rolling a fresh direction. When a
+named reference overrides the process, that's expected — the brief wins.
 
 ## Color strategy
 
-**Full palette / Drenched** — seven named dimension inks, no purple/violet anywhere in the
-palette (deliberately excluded), plus a warm-tinted (never neutral gray) ground and a
-full-bleed multi-hue gradient wash behind the hero:
+**Full palette over a warm, never-neutral ground.** Light mode is warm cream daylight; dark
+mode is a cozy dusk-brown, not a cold black flip — both carry real hue in the base tokens,
+same principle as the prior two passes, different temperature (warm cream/brown here vs.
+warm charcoal or cyanotype blue before).
 
-- `--dim-velocity` — coral/red-orange (hue ~28)
-- `--dim-finishing` — gold/amber (hue ~75)
-- `--dim-iteration` — lime/yellow-green (hue ~122)
-- `--dim-consistency` — green (hue ~155)
-- `--dim-ambition` — teal/cyan (hue ~195)
-- `--dim-quality` — blue (hue ~240)
-- `--dim-efficiency` — rose/pink (hue ~355)
-
-Each dimension owns its hue permanently — `SplitBoard.tsx`'s `DIM_TEXT` / `DIM_BG` maps are
-the single source of truth; a future results page or share card must reuse the same
-`key → color` mapping rather than reassigning colors per-view. `--border` stays hue-avoidant
-(low chroma) so it visually recedes rather than competing with the score data.
-
-Dark mode is not neutral gray-black — background/card tokens carry a warm hue (~45°) so it
-reads as "warm charcoal," never "black and white" even before any accent color appears. Light
-mode mirrors it as warm paper (~75° hue), not the cliché cream, not stark white. Never hardcode
-hex — reference the `--dim-*` tokens (exposed as `text-dim-*` / `bg-dim-*` Tailwind utilities
-via the `@theme inline` block in `app/globals.css`).
-
-**Retired:** the original `--sector-purple/green/amber` three-tier system (tier-by-threshold
-coloring). Do not reintroduce it or any purple/violet hue — both were explicit user rejections,
-not stylistic preferences to weigh against other options.
+- Seven Builder Vector dimensions keep seven distinct "crayon" inks (red, gold, olive,
+  green, teal-blue, orange, rose) — **no purple**, a standing constraint from the very first
+  redesign round that still applies to every future pass regardless of world.
+- `--emphasis` (a warm terracotta/rust) is new: the one color reserved for highlighting a
+  key phrase inside body copy (see the hero headline), mirroring folk's own emphasis-word
+  treatment. Don't reuse it as a dimension color — it's specifically the "highlighted word"
+  role.
+- A full-bleed soft painterly gradient (peach → dusty blue-green, `BackgroundFX.tsx`) sits
+  behind the whole page — atmosphere, not a hero-only effect.
 
 ## Typography
 
-- **Barlow Condensed** (`--font-condensed`, weights 500-800) — instrument caps: nav wordmark,
-  sector labels, section eyebrows, the overall grade numeral.
-- **Geist Sans** (`--font-sans`) — body copy, headings outside the instrument chrome.
-- **Geist Mono** (`--font-geist-mono` / `font-mono`) — all numeric readouts (scores, deltas,
-  CLI command), always `tabular-nums`.
+- **Fredoka** (`--font-condensed`, weights 500-700) — the display voice everywhere: nav
+  wordmark, all headings, the score numeral, sticker text. Genuinely rounded terminals,
+  matches folk's chunky friendly display type. This is the world's signature choice; don't
+  swap it back to a condensed/technical face without a real reason.
+- **Geist Sans** (`--font-sans`) — body paragraphs only.
+- **Geist Mono** (`--font-geist-mono`) — the CLI fallback command display only; this world
+  has no other "technical readout" content, unlike the prior two passes.
+- Voice: UI chrome (buttons, badges, section headings, sticker copy) is lowercase and
+  casual. Established factual/product copy (the hero descriptive paragraph, dimension
+  names) was kept word-for-word — only casing/emphasis changed, not content.
 
 ## Components
 
-- `SplitBoard.tsx` — `OverallTile` (solid gold numeral — **not** gradient text, the detector
-  flags `bg-clip-text` gradients as an AI-slop tell — on a soft multi-hue gradient *background*
-  wash) beside seven `SectorRow`s. Each row gets a solid-filled colored code chip (`S1`…`S7`),
-  a color-matched progress bar, and a color-matched value. Count-up animates on mount
-  (`useCountUp`, first-viewport content, not scroll-triggered); hover reveals "vs median" delta
-  in green (ahead) or coral (behind) — reusing `dim-consistency` / `dim-velocity` rather than
-  inventing an eighth semantic color.
-- `HowItWorks.tsx` — step chips: coral → blue → gold (one dimension hue per step).
-- `SiteHeader.tsx` — wordmark carries a four-dot cluster (coral/blue/gold/green) instead of a
-  tier triad.
-- `BackgroundFX.tsx` — five soft blurred blobs, each a different dimension hue, at real visible
-  opacity (0.10-0.22, higher in dark mode) — this is load-bearing for "not black and white,"
-  not decoration to mute further. Plus the `sweep-line` scan animation from the first pass.
-- CTA (`ShimmerButton` in `app/page.tsx`) — three-stop gradient, coral → gold → blue, the
-  boldest single element on the page; this is the one place a gradient is appropriate (a
-  background fill, not text).
+- `ScoreCard.tsx` (replaces the blueprint-era `DrawingSheet.tsx`) — a large rounded-3xl
+  card, soft offset+blur shadow (real depth, not decoration), a filled circular score badge,
+  and rounded-pill progress bars per dimension in that dimension's ink color. Slight
+  `rotate: -1deg` on the whole card for a "placed on the desk" feel.
+- `HowItWorks.tsx` — completely reimagined as a mock iMessage-style thread ("yo what's your
+  github handle" → "@octocat" → …) inside a rounded card, rather than a 3-card icon grid
+  (the previous two passes both used cards-of-icon+heading+text or a numbered notes list;
+  this is deliberately different, and ties into folk's own "texting" mechanic without
+  copying folk's actual content). Bubble content can be edited freely — it's illustrative
+  copy, not established product copy — but keep the format (bot/you exchange, last message
+  bold) since that's the bit doing the work.
+- `Sticker.tsx` — small reusable rotated note component (rounded-2xl, soft shadow, border)
+  for the scattered hero callouts. `hidden sm:block` — stickers are a desktop flourish, they
+  don't try to survive small viewports and shouldn't be forced to.
+- `SiteHeader.tsx` / `SiteFooter.tsx` — solid (non-blurred) background, circular "B" mark,
+  fully rounded interactive elements (buttons, theme toggle) matching the pill language.
+- `BackgroundFX.tsx` — layered soft `radial-gradient`s only, no grid, no blobs-with-blur
+  physics, no scanline. Purely atmospheric.
+
+## Radius & shape language
+
+`--radius: 1.25rem` (up from 0.25rem in the blueprint pass) — this world is soft and rounded
+everywhere: pill buttons and inputs (`rounded-full`), large-radius cards (`rounded-[2rem]`
+on the biggest surfaces). No sharp rectilinear corners anywhere on purpose.
 
 ## Motion
 
-Unchanged from the first pass: `SplitBoard` animates on mount (first-viewport content) with
-per-row stagger and a manual `requestAnimationFrame` count-up (`useCountUp`); everything else
-keeps the existing `fadeUp` / `whileInView` scroll-triggered patterns.
+- Stickers pop in with a small overshoot ease (`[0.34, 1.56, 0.64, 1]`) and a slight rotate
+  correction — a "landing" feel, not a fade.
+- `ScoreCard` and chat bubbles keep the established count-up / stagger-reveal patterns from
+  earlier passes (`useCountUp`, per-row/per-bubble stagger) — that mechanic survived the
+  visual rebuild because it's a good mechanic, not because it's tied to any one world.
 
 ## What NOT to do
 
-- **No purple or violet, anywhere, in any future addition.** This was an explicit, direct user
-  rejection of the first pass — not a taste call to re-litigate.
-- Don't let color retreat back to thin accent lines/dots on a neutral ground — that exact
-  approach (three small tier dots on a near-black/near-white base) was tried and explicitly
-  rejected as still reading like "black and white." Color needs to fill real surface area:
-  chips, bars, backgrounds, gradients-as-fills.
-- Don't use gradient *text* (`bg-clip-text`) — flagged by `impeccable`'s detector as an AI
-  tell. Gradients are fine as background fills (CTA, tile backdrop), never as the text color
-  itself.
-- Don't move the sample data out of "sample" framing — the `SAMPLE OUTPUT` badge and
-  `octocat` label on `SplitBoard` are load-bearing; nothing here is live user data yet (see
-  `PRODUCT.md` — web scoring doesn't exist).
+- **No purple, ever** — standing constraint since the first redesign round.
+- Don't reintroduce a technical/instrument register (blueprint linework, timing-tower
+  splits, monospace-as-costume) — two prior passes tried variations on "credible dev
+  instrument" and both were explicitly rejected as generic/unoriginal. This world's answer
+  to "credible for developers" is personality and specificity, not technical chrome.
+- Don't flatten the shadows back to zero or the radius back to sharp corners — that's the
+  blueprint world's language, not this one's.
+- Don't over-fill the hero with stickers on mobile — they're intentionally hidden below
+  `sm:`, not shrunk to fit.
+- Sample data stays labeled as sample (`sample output` badge, `@octocat`) — nothing on the
+  marketing page is live user data.

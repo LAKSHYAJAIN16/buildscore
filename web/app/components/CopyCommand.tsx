@@ -21,7 +21,7 @@ export function CopyCommand({ command }: { command: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="group flex w-full max-w-sm items-center justify-between gap-3 rounded-lg border border-border bg-muted/50 px-4 py-2.5 text-left font-mono text-xs text-foreground transition-colors hover:bg-muted"
+      className="group flex w-full max-w-sm items-center justify-between gap-3 rounded-full border border-border bg-muted/50 px-5 py-2.5 text-left font-mono text-xs text-foreground transition-colors hover:bg-muted"
     >
       <span className="truncate">
         <span className="select-none text-muted-foreground">$ </span>

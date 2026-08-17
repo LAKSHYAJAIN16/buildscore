@@ -1,66 +1,56 @@
 "use client";
 
 import { motion } from "motion/react";
-import { History, Sparkles, User } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-const STEPS = [
-  {
-    icon: User,
-    step: "01",
-    title: "Give us a username",
-    description: "No OAuth, no signup. Just a public GitHub handle.",
-    accent: "text-dim-velocity bg-dim-velocity/10",
-  },
-  {
-    icon: History,
-    step: "02",
-    title: "We read your full history",
-    description:
-      "Every repo, every release, every week of commit activity — not just the green squares.",
-    accent: "text-dim-quality bg-dim-quality/10",
-  },
-  {
-    icon: Sparkles,
-    step: "03",
-    title: "Get your Builder Vector",
-    description:
-      "Seven weighted dimensions, one score. How you actually build, not just how much you commit.",
-    accent: "text-dim-finishing bg-dim-finishing/10",
-  },
-];
+const MESSAGES = [
+  { from: "bot", text: "yo what's your github handle" },
+  { from: "you", text: "@octocat" },
+  { from: "bot", text: "say less — pulling every repo, release, and commit rn" },
+  { from: "bot", text: "not just your green squares. all of it 👀" },
+  { from: "bot", text: "ok you're a 79. velocity's actually kind of insane", bold: true },
+] as const;
 
 export function HowItWorks() {
   return (
-    <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-3">
-      {STEPS.map(({ icon: Icon, step, title, description, accent }, i) => (
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.6, delay: i * 0.12, ease: EASE }}
-        >
-          <Card className="h-full ring-foreground/10 transition-colors hover:ring-foreground/20">
-            <CardContent className="flex flex-col gap-3 px-5 py-1">
-              <div className="flex items-center justify-between">
-                <span className={cn("flex size-9 items-center justify-center rounded-lg", accent)}>
-                  <Icon className="size-4.5" />
-                </span>
-                <span className="font-condensed text-xs font-semibold tracking-wide text-muted-foreground/60">
-                  {step}
-                </span>
-              </div>
-              <h3 className="text-sm font-semibold">{title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-      ))}
+    <div className="w-full max-w-md rounded-[2rem] border border-border bg-card p-5 shadow-[0_18px_40px_-16px_oklch(0.3_0.05_45_/_0.3)] sm:p-6">
+      <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+          B
+        </span>
+        <div>
+          <p className="text-sm font-semibold">buildscore</p>
+          <p className="text-xs text-muted-foreground">10 seconds ago</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2.5">
+        {MESSAGES.map((m, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.4, delay: i * 0.12, ease: EASE }}
+            className={cn("flex", m.from === "you" ? "justify-end" : "justify-start")}
+          >
+            <span
+              className={cn(
+                "max-w-[85%] rounded-2xl px-4 py-2 text-sm leading-snug",
+                m.from === "you"
+                  ? "rounded-br-sm bg-primary text-primary-foreground"
+                  : "rounded-bl-sm bg-muted text-foreground",
+                "bold" in m && m.bold && "font-semibold"
+              )}
+            >
+              {m.text}
+            </span>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }
