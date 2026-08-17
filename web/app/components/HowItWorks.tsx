@@ -14,7 +14,7 @@ const STEPS = [
     step: "01",
     title: "Give us a username",
     description: "No OAuth, no signup. Just a public GitHub handle.",
-    accent: "text-sector-purple bg-sector-purple/10",
+    accent: "text-dim-velocity bg-dim-velocity/10",
   },
   {
     icon: History,
@@ -22,7 +22,7 @@ const STEPS = [
     title: "We read your full history",
     description:
       "Every repo, every release, every week of commit activity — not just the green squares.",
-    accent: "text-sector-green bg-sector-green/10",
+    accent: "text-dim-quality bg-dim-quality/10",
   },
   {
     icon: Sparkles,
@@ -30,7 +30,7 @@ const STEPS = [
     title: "Get your Builder Vector",
     description:
       "Seven weighted dimensions, one score. How you actually build, not just how much you commit.",
-    accent: "text-sector-amber bg-sector-amber/10",
+    accent: "text-dim-finishing bg-dim-finishing/10",
   },
 ];
 

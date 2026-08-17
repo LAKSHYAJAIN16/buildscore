@@ -36,7 +36,7 @@ export function CopyCommand({ command }: { command: string }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.6 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0 flex items-center justify-center text-sector-green"
+              className="absolute inset-0 flex items-center justify-center text-dim-consistency"
             >
               <Check className="size-3.5" />
             </motion.span>

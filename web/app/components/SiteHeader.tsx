@@ -16,9 +16,10 @@ export function SiteHeader() {
             Buildscore
           </span>
           <span className="ml-0.5 flex items-center gap-1" aria-hidden>
-            <span className="size-1.5 rounded-full bg-sector-purple" />
-            <span className="size-1.5 rounded-full bg-sector-green" />
-            <span className="size-1.5 rounded-full bg-sector-amber" />
+            <span className="size-1.5 rounded-full bg-dim-velocity" />
+            <span className="size-1.5 rounded-full bg-dim-quality" />
+            <span className="size-1.5 rounded-full bg-dim-finishing" />
+            <span className="size-1.5 rounded-full bg-dim-consistency" />
           </span>
         </Link>
 

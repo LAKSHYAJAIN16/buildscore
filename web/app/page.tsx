@@ -105,7 +105,7 @@ export default function Home() {
             />
             <ShimmerButton
               type="submit"
-              background="linear-gradient(135deg, var(--sector-purple), oklch(0.4 0.16 300))"
+              background="linear-gradient(135deg, var(--dim-velocity), var(--dim-finishing) 55%, var(--dim-quality))"
               className="h-11 gap-1.5 px-6 text-sm font-medium shadow-lg shadow-black/10"
             >
               Get your score
