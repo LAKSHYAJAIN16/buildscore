@@ -7,6 +7,114 @@ something.
 
 ---
 
+## 2026-08-17
+
+### Backend: live scoring is now real (`web/lib/buildscore/`, `web/app/api/`)
+
+- Built the actual web backend that computes a Buildscore live, entirely in
+  TypeScript on Vercel (user's explicit call, over reusing the Python
+  pipeline as a separate service) — planned via `EnterPlanMode`, approved,
+  then implemented by a forked background agent. Full plan is preserved at
+  `C:\Users\laksh\.claude\plans\keen-napping-hopper.md`.
+- Architecture: `POST /api/scan` checks a Postgres (Neon) cache/dedup lock
+  and either returns instantly (`user_scores` TTL cache, ~18h) or claims the
+  scan and continues in the background via Next's `after()`; long scans
+  survive Vercel's duration limits by processing repos in time-boxed chunks
+  that self-continue through an internal-secret-protected
+  `POST /api/scan/worker`. `GET /api/scan/[username]` polls status.
+- **Caching (the user's explicit requirement — "don't repeat repos we've
+  already fetched")**: `repos_cache` is keyed by repo `full_name`; if a
+  repo's `pushed_at` hasn't changed since last fetch, its ~4 GitHub
+  sub-resource calls (releases/languages/commit_activity/code_frequency)
+  are skipped entirely and the cached data is reused.
+- Security: DB-backed per-IP rate limiting, the dedup lock (never two
+  concurrent scans for the same username), a shared-secret header on the
+  worker route, generic `{error: "Something went wrong."}` on all
+  unexpected failures (no stack traces to the client). `security.py`'s
+  local-JSON-file drift check was redesigned (not ported) since a local
+  file doesn't survive serverless invocations — now DB-backed and advisory.
+- `quality`/`efficiency`/`ai_leverage` intentionally stay `null`, matching
+  the Python CLI exactly — implementing those heuristics is still separate,
+  already-tracked work (see 2026-08-16 entry below).
+- Verified: `tsc --noEmit` and `eslint` both clean. **Not yet verified
+  live** — no real `GITHUB_TOKEN`/`DATABASE_URL` in this dev environment,
+  so the cache-hit path, the atomic `claimScanSlot` upsert SQL, and the
+  chunked-continuation handoff have never round-tripped against a real
+  Postgres/Vercel deploy. First real deploy should specifically watch: does
+  `after()` + self-`fetch()` survive Vercel's function-freeze timing.
+- Also fixed a real pre-existing bug while touching `web/.gitignore`: its
+  `.env*` pattern was silently blocking `.env.example` (the committed
+  template) from ever being tracked. Narrowed to `.env`/`.env.local`/
+  `.env.*.local`.
+- Committed as `6562444` (backend) — pushed.
+
+### Landing page, take 3 and 4: folk.com
+
+- The "architectural blueprint" redesign (see below) shipped, got tested
+  live by the user in their own browser, and was rejected hard: "ew. make
+  the design more ORIGINAL." then, with a concrete reference: **"vibey,
+  Gen-Z... look at folk.com."**
+- Actually navigated to folk.com and looked at it (not from memory) before
+  building: warm cream/painterly-gradient background, chunky rounded
+  display type, scattered rotated "sticker" text-message notes with soft
+  shadows, lowercase casual copy voice, pill buttons everywhere, an
+  iMessage-thread motif (folk's whole pitch is "the friend in your texts").
+- Rebuilt to match: Fredoka (rounded display font) replacing the
+  blueprint's Titillium Web; warm cream daylight / cozy dusk-brown-at-night
+  palette replacing cyanotype blue; `--radius` back up to `1.25rem` (pills,
+  large rounded cards) from the blueprint's flat `0.25rem`; a new
+  `Sticker.tsx` component for the scattered hero callouts
+  ("shipped in 3 days fr", "23 repos, 4 abandoned 💀", etc. — original
+  buildscore-flavored copy, not folk's); `HowItWorks` reimagined as a mock
+  iMessage thread instead of a card grid or notes list; `ScoreCard.tsx`
+  (replacing the blueprint's `DrawingSheet.tsx`) as a rounded card with
+  pill progress bars. The 7 no-purple dimension colors carried over,
+  recolored warmer.
+- **This landed** — user reaction: "MUCH, MUCH better. not perfect but
+  definitely a start." Nothing further requested yet as of end of session.
+- `web/DESIGN.md` rewritten again to document this world and explicitly
+  rule out reverting to any "technical/instrument" register (timing tower,
+  blueprint) — two passes already tried variations on that and both were
+  rejected as generic.
+- Committed as `983c22a` (frontend) — pushed.
+- Real, unresolved risk from working in parallel with the backend fork:
+  both touched `web/app/page.tsx` concurrently. The fork's functional
+  logic (`ScanState`, `handleSubmit`, `pollUntilDone`) was preserved and
+  is now wired into the new folk-styled JSX — worth a careful read of
+  `page.tsx` next session before assuming it's untouched.
+
+### Landing page, take 2 (superseded within this same session)
+
+- Between the rainbow redesign (2026-08-16) and folk.com, there was a full
+  third pass at "architectural blueprint" — cyanotype blueprint blue +
+  white linework (dark) / graphite-on-white CAD plot (light), Titillium Web
+  type, 7 dimension colors as "CAD layer inks," SVG dimension-line data
+  rows that drew themselves in on load. Went through the `impeccable`
+  skill's full direction-round ceremony (rolled "Air Traffic Control
+  Radar," picked "Architectural Blueprint" as Impeccable's own pick
+  instead). **This was never committed** — the user rejected it in the
+  browser before it reached a commit point, so it left no trace in git
+  history, only in this log. Worth remembering so "blueprint" isn't
+  re-suggested as a fresh idea later.
+
+### Open threads / next steps
+
+- [ ] First real deploy: provision Neon Postgres + Vercel env vars
+      (`GITHUB_TOKEN`, `DATABASE_URL`, `INTERNAL_WORKER_SECRET`,
+      `APP_BASE_URL`), run `drizzle-kit migrate`, and actually exercise the
+      scan flow end-to-end against real GitHub data — this is unverified.
+- [ ] `quality`/`ai_leverage` v0 heuristics still not implemented (carried
+      over from 2026-08-16, unchanged).
+- [ ] `efficiency` still intentionally deferred.
+- [ ] Landing page: no further design changes requested as of end of
+      session, but the user's "not perfect" caveat on folk.com direction
+      suggests more polish may be wanted later — don't assume it's final.
+- [ ] The original full design vision doc (pasted 2026-08-16) still hasn't
+      been saved into the repo as e.g. `docs/VISION.md` — still open,
+      still just offered, never confirmed.
+
+---
+
 ## 2026-08-16
 
 ### Landing page (`web/`)
