@@ -1,8 +1,8 @@
-import { ipAddress } from "@vercel/functions";
 import { NextRequest, NextResponse } from "next/server";
 
 import { checkAndIncrementRateLimit } from "@/lib/buildscore/db/rate-limit";
 import { getUserScore } from "@/lib/buildscore/db/user-scores";
+import { getClientIp } from "@/lib/buildscore/ip";
 import { isValidGithubUsername } from "@/lib/buildscore/username";
 import { RATE_LIMIT_POLL_MAX_REQUESTS, RATE_LIMIT_POLL_WINDOW_SECONDS } from "@/lib/buildscore/variables";
 
@@ -19,7 +19,7 @@ export async function GET(
     }
     const username = raw.toLowerCase();
 
-    const ip = ipAddress(request) ?? "unknown";
+    const ip = getClientIp(request);
     const rateLimit = await checkAndIncrementRateLimit(
       `${ip}:poll`,
       RATE_LIMIT_POLL_WINDOW_SECONDS,

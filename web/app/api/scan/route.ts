@@ -1,9 +1,9 @@
 import { after } from "next/server";
-import { ipAddress } from "@vercel/functions";
 import { NextRequest, NextResponse } from "next/server";
 
 import { checkAndIncrementRateLimit } from "@/lib/buildscore/db/rate-limit";
 import { claimScanSlot } from "@/lib/buildscore/db/user-scores";
+import { getClientIp } from "@/lib/buildscore/ip";
 import { runScanChunk } from "@/lib/buildscore/pipeline";
 import { isValidGithubUsername } from "@/lib/buildscore/username";
 import { RATE_LIMIT_SCAN_MAX_REQUESTS, RATE_LIMIT_SCAN_WINDOW_SECONDS } from "@/lib/buildscore/variables";
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
     const username = raw.toLowerCase();
 
-    const ip = ipAddress(request) ?? "unknown";
+    const ip = getClientIp(request);
     const rateLimit = await checkAndIncrementRateLimit(
       `${ip}:scan`,
       RATE_LIMIT_SCAN_WINDOW_SECONDS,
