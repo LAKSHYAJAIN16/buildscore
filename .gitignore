@@ -6,3 +6,7 @@ src/buildscore/variables.py
 *.egg-info/
 build/
 dist/
+
+# internal notes, not for the public repo
+conversation_history.md
+design.md
