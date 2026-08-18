@@ -125,22 +125,12 @@ export default function Home() {
             not another todo app
           </Sticker>
 
-          <motion.span
+          <motion.h1
             initial="hidden"
             animate="visible"
             custom={0}
             variants={fadeUp}
-            className="rounded-full border border-border bg-card px-4 py-1.5 text-sm font-semibold"
-          >
-            Buildscore
-          </motion.span>
-
-          <motion.h1
-            initial="hidden"
-            animate="visible"
-            custom={0.1}
-            variants={fadeUp}
-            className="mt-6 max-w-2xl font-condensed text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl"
+            className="max-w-2xl font-condensed text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl"
           >
             how good are you at{" "}
             <span className="text-emphasis">making things exist?</span>
@@ -149,7 +139,7 @@ export default function Home() {
           <motion.p
             initial="hidden"
             animate="visible"
-            custom={0.22}
+            custom={0.14}
             variants={fadeUp}
             className="mt-6 max-w-lg text-base leading-7 text-muted-foreground"
           >
@@ -159,12 +149,13 @@ export default function Home() {
           </motion.p>
 
           <motion.form
+            id="score-form"
             initial="hidden"
             animate="visible"
-            custom={0.34}
+            custom={0.28}
             variants={fadeUp}
             onSubmit={handleSubmit}
-            className="mt-10 flex w-full max-w-md flex-col gap-3 sm:flex-row"
+            className="mt-10 flex w-full max-w-md scroll-mt-28 flex-col gap-3 sm:flex-row"
           >
             <Input
               type="text"
@@ -190,7 +181,7 @@ export default function Home() {
           <motion.div
             initial="hidden"
             animate="visible"
-            custom={0.4}
+            custom={0.36}
             variants={fadeUp}
             className="mt-4 text-xs text-muted-foreground"
           >

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { GithubIcon } from "./icons";
+import { BuildscoreMark, GithubIcon } from "./icons";
 
 const EXPLORE_LINKS = [
   { href: "/", label: "home" },
@@ -13,8 +13,8 @@ export function SiteFooter() {
       <div className="mx-auto grid w-full max-w-5xl gap-10 px-6 py-14 sm:grid-cols-[1.3fr_1fr_1fr]">
         <div>
           <Link href="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-              B
+            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <BuildscoreMark className="size-4" />
             </span>
             <span className="font-condensed text-lg font-semibold tracking-tight">
               buildscore

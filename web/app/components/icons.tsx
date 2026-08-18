@@ -1,5 +1,18 @@
 import type { SVGProps } from "react";
 
+/** Three ascending rounded bars — the same shape language as the Builder
+ * Vector's own dimension bars, standing in for "shipping progress" rather
+ * than a generic letterform. */
+export function BuildscoreMark(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <rect x="3.5" y="12" width="4.5" height="8" rx="2.25" />
+      <rect x="9.75" y="7" width="4.5" height="13" rx="2.25" />
+      <rect x="16" y="2" width="4.5" height="18" rx="2.25" />
+    </svg>
+  );
+}
+
 export function GithubIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>

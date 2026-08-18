@@ -176,4 +176,8 @@
   html {
     @apply font-sans;
   }
+  ::selection {
+    background: var(--emphasis);
+    color: var(--primary-foreground);
+  }
 }

@@ -57,8 +57,14 @@ warm charcoal or cyanotype blue before).
 - `Sticker.tsx` — small reusable rotated note component (rounded-2xl, soft shadow, border)
   for the scattered hero callouts. `hidden sm:block` — stickers are a desktop flourish, they
   don't try to survive small viewports and shouldn't be forced to.
-- `SiteHeader.tsx` / `SiteFooter.tsx` — solid (non-blurred) background, circular "B" mark,
-  fully rounded interactive elements (buttons, theme toggle) matching the pill language.
+- `SiteHeader.tsx` / `SiteFooter.tsx` — solid (non-blurred) background, fully rounded
+  interactive elements (buttons, theme toggle) matching the pill language. On scroll, the
+  sticky header gains a subtle border + soft shadow (`transition-shadow`) — an elevation
+  signal, not a redesign of the flat resting state.
+- `BuildscoreMark` (`icons.tsx`) — the logomark, used in the header, footer, `HowItWorks`'
+  chat avatar, and `app/icon.tsx` (favicon). Three ascending rounded bars, same shape
+  language as the Builder Vector's own dimension bars — deliberately not a lettermark ("B"),
+  and not a generic icon-library glyph. Replaced the earlier placeholder "B" monogram.
 - `BackgroundFX.tsx` — layered soft `radial-gradient`s only, no grid, no blobs-with-blur
   physics, no scanline. Purely atmospheric.
 
@@ -89,3 +95,6 @@ on the biggest surfaces). No sharp rectilinear corners anywhere on purpose.
   `sm:`, not shrunk to fit.
 - Sample data stays labeled as sample (`sample output` badge, `@octocat`) — nothing on the
   marketing page is live user data.
+- No eyebrow/kicker label above a heading (a small pill or line sitting above the H1 just to
+  restate the brand or section topic). The hero briefly had a "Buildscore" pill above the H1
+  — removed; the heading carries its own weight.

@@ -73,14 +73,13 @@ function DimensionRow({
       initial={{ opacity: 0, x: -8 }}
       animate={active ? { opacity: 1, x: 0 } : {}}
       transition={{ duration: 0.5, delay, ease: EASE }}
-      className="group"
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <span className="font-condensed text-sm font-semibold">{label}</span>
         <div className="flex items-baseline gap-2">
           <span
             className={cn(
-              "font-sans text-[11px] font-medium opacity-0 transition-opacity group-hover:opacity-100",
+              "font-sans text-[11px] font-medium",
               delta >= 0 ? "text-dim-consistency" : "text-dim-velocity"
             )}
           >
@@ -118,7 +117,7 @@ export function ScoreCard() {
       transition={{ duration: 0.6, delay: 0.3, ease: EASE }}
       className="w-full"
     >
-      <div className="mx-auto max-w-xl rounded-[2rem] border border-border bg-card p-6 shadow-[0_18px_40px_-16px_oklch(0.3_0.05_45_/_0.35)] sm:p-8">
+      <div className="mx-auto max-w-2xl rounded-[2rem] border border-border bg-card p-7 shadow-[0_18px_40px_-16px_oklch(0.3_0.05_45_/_0.35)] sm:p-10">
         <div className="flex items-center justify-between gap-3">
           <span className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground">
             sample output
@@ -126,9 +125,9 @@ export function ScoreCard() {
           <span className="text-xs text-muted-foreground">@octocat</span>
         </div>
 
-        <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-          <div className="flex shrink-0 flex-col items-center gap-1">
-            <div className="flex size-28 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_24px_-8px_oklch(0.3_0.05_45_/_0.4)]">
+        <div className="mt-7 flex flex-col items-center gap-8 sm:flex-row sm:items-start">
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
+            <div className="flex size-32 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_24px_-8px_oklch(0.3_0.05_45_/_0.4)]">
               <span className="font-condensed text-4xl font-bold tabular-nums leading-none">
                 {displayScore}
               </span>

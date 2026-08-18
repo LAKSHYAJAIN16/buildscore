@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
+import { BuildscoreMark } from "./icons";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -18,8 +19,8 @@ export function HowItWorks() {
   return (
     <div className="w-full max-w-md rounded-[2rem] border border-border bg-card p-5 shadow-[0_18px_40px_-16px_oklch(0.3_0.05_45_/_0.3)] sm:p-6">
       <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
-        <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-          B
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <BuildscoreMark className="size-4" />
         </span>
         <div>
           <p className="text-sm font-semibold">buildscore</p>
