@@ -21,6 +21,10 @@ from .variables import (
     ACTIVENESS_LABEL_THRIVING,
     AI_COMMIT_SAMPLE_SIZE,
     DEFAULT_MAX_REPOS,
+    SCORE_TIER_A,
+    SCORE_TIER_B,
+    SCORE_TIER_S,
+    SCORE_TIER_S_PLUS,
 )
 
 app = typer.Typer(add_completion=False)
@@ -193,7 +197,11 @@ def score(
 
 
 def _print_pretty(result: BuildscoreResult) -> None:
-    console.print(f"\n[bold]Buildscore for {result.username}[/bold]: {result.score}/100\n")
+    tier = _score_tier(result.score)
+    console.print(
+        f"\n[bold]Buildscore for {result.username}[/bold]: "
+        f"{result.score}/100 [bold]({tier})[/bold]\n"
+    )
 
     table = Table(show_header=True, header_style="bold")
     table.add_column("Dimension")
@@ -238,6 +246,18 @@ def _print_pretty(result: BuildscoreResult) -> None:
         console.print()
 
 
+def _score_tier(score: float) -> str:
+    if score >= SCORE_TIER_S_PLUS:
+        return "S+"
+    if score >= SCORE_TIER_S:
+        return "S"
+    if score >= SCORE_TIER_A:
+        return "A"
+    if score >= SCORE_TIER_B:
+        return "B"
+    return "C"
+
+
 def _activeness_label(score: float) -> str:
     if score >= ACTIVENESS_LABEL_THRIVING:
         return "thriving"
@@ -253,6 +273,7 @@ def _serialize(result: BuildscoreResult) -> dict:
         "username": result.username,
         "generated_at": result.generated_at.isoformat(),
         "score": result.score,
+        "tier": _score_tier(result.score),
         "vector": {
             "velocity": result.vector.velocity,
             "finishing": result.vector.finishing,

@@ -189,3 +189,17 @@ ACID_AMBITION_BLEND_WEIGHT = 0.7
 # Documentation sub-score's contribution to Quality's structure score,
 # alongside tests/CI/license presence -- see QUALITY_STRUCTURE_* above.
 ACID_QUALITY_DOCUMENTATION_POINTS = 25
+
+# --- Score tier (cli.py) ---
+#
+# A letter-tier bucket of the absolute 0-100 score, display-only (cosmetic,
+# like ACTIVENESS_LABEL_* -- never used in scoring math). Deliberately does
+# NOT claim a percentile ("top X% of people") -- that needs a real
+# population of scanned users to compare against, which doesn't exist yet.
+# These cutoffs are our own judgment call, not copied from any competitor's
+# specific thresholds.
+SCORE_TIER_S_PLUS = 90
+SCORE_TIER_S = 75
+SCORE_TIER_A = 60
+SCORE_TIER_B = 45
+# below SCORE_TIER_B is tier "C"
