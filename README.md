@@ -25,13 +25,32 @@ copy .env.example .env
 set GITHUB_TOKEN=ghp_xxx
 ```
 
+Optionally, also set `ANTHROPIC_API_KEY` to enable ACID repo analysis (see
+below) — everything else works fine without it.
+
 ## Usage
 
 ```
 buildscore <github-username>
 buildscore <github-username> --pretty
 buildscore <github-username> --max-repos 30
+buildscore <github-username> --pretty --no-acid   # skip ACID even with a key set
 ```
+
+## ACID repo analysis (optional)
+
+When `ANTHROPIC_API_KEY` is set, each meaningful repo also gets an LLM-based
+analysis — our version of what GitRoll calls ACID (Architecture, Cross-Domain,
+Innovation, Documentation): a 1-2 sentence plain-English summary of what the
+repo actually does, plus four 1-5 sub-scores. These feed into `ambition`
+(Architecture/Cross-Domain/Innovation) and `quality` (Documentation) as a
+blend with the existing heuristics — see `src/buildscore/acid.py` and
+`_repo_ambition_score`/`_repo_quality_score` in `scoring.py`.
+
+This is the only part of the pipeline that costs money beyond GitHub API
+usage (one Claude Haiku call per meaningful repo). It's entirely optional —
+without a key, `ambition`/`quality` fall back to the pre-existing heuristics
+unchanged, and `--no-acid` skips it even if a key is configured.
 
 ## Known limitations (v0)
 

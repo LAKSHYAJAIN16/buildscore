@@ -10,6 +10,21 @@ class Release:
 
 
 @dataclass
+class AcidAnalysis:
+    """LLM-generated per-repo analysis -- GitRoll calls their version of this
+    ACID (Architecture, Cross-Domain, Innovation, Documentation); ours isn't
+    trademarked so no (c). Each sub-score is 1-5. `summary` is a 1-2 sentence
+    plain-English description of what the repo does and why it scored the
+    way it did -- shown to the user, not just folded into a number."""
+
+    summary: str
+    architecture: int
+    cross_domain: int
+    innovation: int
+    documentation: int
+
+
+@dataclass
 class RepoData:
     name: str
     full_name: str
@@ -25,6 +40,8 @@ class RepoData:
     code_frequency: list[list[int]]
     root_entries: list[str]
     recent_commit_messages: list[str]
+    description: str | None = None
+    acid: AcidAnalysis | None = None
 
 
 @dataclass

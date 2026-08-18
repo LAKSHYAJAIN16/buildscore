@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 
 from .models import BuilderStats, BuilderVector, RepoClassification
 from .variables import (
+    ACID_AMBITION_BLEND_WEIGHT,
+    ACID_QUALITY_DOCUMENTATION_POINTS,
     ACTIVENESS_GRAVEYARD_THRESHOLD,
     AI_CONFIG_FILENAMES,
     AI_LEVERAGE_COMMIT_WEIGHT,
@@ -85,7 +87,24 @@ def _repo_ambition_score(repo) -> float:
         AMBITION_DIVERSITY_CAP, len(repo.languages) * AMBITION_DIVERSITY_PER_LANGUAGE
     )
     size_score = min(AMBITION_SIZE_CAP, repo.size_kb / AMBITION_SIZE_DIVISOR_KB)
-    return min(100.0, lang_bonus + lang_diversity + size_score)
+    heuristic_score = min(100.0, lang_bonus + lang_diversity + size_score)
+
+    if repo.acid is None:
+        return heuristic_score
+
+    # ACID's Architecture/Cross-Domain/Innovation sub-scores are real
+    # content-informed judgment (see acid.py) -- when available, they
+    # dominate the blend; the old language/size heuristic still contributes
+    # so one LLM call can't single-handedly swing the score to an extreme.
+    acid_component = (
+        statistics.mean([repo.acid.architecture, repo.acid.cross_domain, repo.acid.innovation])
+        / 5
+        * 100
+    )
+    return (
+        ACID_AMBITION_BLEND_WEIGHT * acid_component
+        + (1 - ACID_AMBITION_BLEND_WEIGHT) * heuristic_score
+    )
 
 
 def _churn_stability_score(code_frequency: list[list[int]]) -> float:
@@ -113,6 +132,11 @@ def _repo_quality_score(repo) -> float:
         + (QUALITY_STRUCTURE_CI_POINTS if entries & QUALITY_CI_INDICATORS else 0)
         + (QUALITY_STRUCTURE_LICENSE_POINTS if entries & QUALITY_LICENSE_NAMES else 0)
     )
+    if repo.acid is not None:
+        # ACID's Documentation sub-score is a real read of the README's
+        # quality, not just "does one exist" -- a graded contribution
+        # rather than the flat presence bonuses above.
+        structure_points += repo.acid.documentation / 5 * ACID_QUALITY_DOCUMENTATION_POINTS
     structure_score = min(100.0, structure_points)
     stability_score = _churn_stability_score(repo.code_frequency)
 

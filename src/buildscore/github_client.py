@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import os
 import time
 from datetime import datetime, timezone
@@ -149,6 +150,21 @@ class GitHubClient:
 
     def code_frequency(self, owner: str, repo: str) -> list[list[int]]:
         return self._get_stats(f"/repos/{owner}/{repo}/stats/code_frequency")
+
+    def readme(self, owner: str, repo: str) -> str:
+        """Decoded README text, or "" if the repo has none. Feeds the ACID
+        analysis (see acid.py) -- not used for anything else, so a missing
+        README is not an error."""
+        resp = self._get(f"/repos/{owner}/{repo}/readme")
+        if resp.status_code == 404:
+            return ""
+        resp.raise_for_status()
+        body = resp.json()
+        content = body.get("content", "")
+        try:
+            return base64.b64decode(content).decode("utf-8", errors="replace")
+        except (ValueError, TypeError):
+            return ""
 
     def _get_stats(self, url: str) -> list:
         # GitHub computes these stats asynchronously on first request and

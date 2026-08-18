@@ -164,3 +164,28 @@ AI_CONFIG_FILENAMES = {"AGENTS.md", "CLAUDE.md", ".cursorrules", ".windsurfrules
 AI_COMMIT_SAMPLE_SIZE = 50  # most recent commits sampled per repo, one API call
 AI_LEVERAGE_CONFIG_POINTS = 40  # flat bonus if any AI config file is present
 AI_LEVERAGE_COMMIT_WEIGHT = 60  # scaled by fraction of sampled commits with an AI signal
+
+# --- ACID repo analysis (acid.py) ---
+#
+# LLM-based per-repo analysis -- our version of what GitRoll calls ACID
+# (Architecture, Cross-Domain, Innovation, Documentation). Genuinely
+# optional: requires ANTHROPIC_API_KEY. Without it, ambition silently falls
+# back to the old language/size heuristic (_repo_ambition_score's original
+# behavior) -- this is the one part of the pipeline with a real per-scan
+# cost, so it must never be a hard requirement for the CLI to work.
+
+ACID_MODEL = "claude-haiku-4-5-20251001"
+ACID_MAX_OUTPUT_TOKENS = 400
+# READMEs are truncated before being sent to the LLM -- bounds both cost and
+# the chance of prompt injection from an untrusted README having enough
+# room to do anything sophisticated.
+ACID_README_MAX_CHARS = 4000
+# Ambition = this fraction from the ACID sub-scores (Architecture,
+# Cross-Domain, Innovation; Documentation feeds Quality instead, see
+# scoring.py) blended with the pre-existing language/size heuristic, when
+# both are available. When ACID isn't available, ambition is 100% the
+# heuristic, unchanged from before.
+ACID_AMBITION_BLEND_WEIGHT = 0.7
+# Documentation sub-score's contribution to Quality's structure score,
+# alongside tests/CI/license presence -- see QUALITY_STRUCTURE_* above.
+ACID_QUALITY_DOCUMENTATION_POINTS = 25

@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+import anthropic
 import httpx
 import typer
 from rich.console import Console
 from rich.table import Table
 
+from .acid import analyze_repo, create_acid_client
 from .github_client import GitHubClient, MissingTokenError, RateLimitError
 from .lifecycle import classify_repo, is_repo_worth_full_analysis
 from .models import BuildscoreResult, Release, RepoData
@@ -45,13 +47,16 @@ def _base_repo_data(raw_repo: dict, **overrides) -> RepoData:
         "code_frequency": [],
         "root_entries": [],
         "recent_commit_messages": [],
+        "description": raw_repo.get("description"),
     }
     fields.update(overrides)
     return RepoData(**fields)
 
 
-def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
-    # Repos too small/trivial to be worth the ~6 extra API calls are
+def _fetch_repo_data(
+    client: GitHubClient, raw_repo: dict, acid_client: anthropic.Anthropic | None
+) -> RepoData:
+    # Repos too small/trivial to be worth the ~6-7 extra API calls are
     # scored 0 directly, without ever touching the network for them.
     if not is_repo_worth_full_analysis(raw_repo["size"], raw_repo["fork"]):
         return _base_repo_data(raw_repo)
@@ -75,6 +80,18 @@ def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
     root_entries = client.repo_root_contents(owner, name)
     recent_commit_messages = client.list_recent_commits(owner, name, AI_COMMIT_SAMPLE_SIZE)
 
+    acid_result = None
+    if acid_client is not None:
+        readme = client.readme(owner, name)
+        acid_result = analyze_repo(
+            acid_client,
+            name=name,
+            description=raw_repo.get("description"),
+            languages=list(languages.keys()),
+            root_entries=root_entries,
+            readme=readme,
+        )
+
     return _base_repo_data(
         raw_repo,
         languages=languages,
@@ -83,6 +100,7 @@ def _fetch_repo_data(client: GitHubClient, raw_repo: dict) -> RepoData:
         code_frequency=code_freq,
         root_entries=root_entries,
         recent_commit_messages=recent_commit_messages,
+        acid=acid_result,
     )
 
 
@@ -96,12 +114,21 @@ def score(
     max_repos: int = typer.Option(
         DEFAULT_MAX_REPOS, "--max-repos", help="Cap on number of repos processed (API cost control)"
     ),
+    no_acid: bool = typer.Option(
+        False,
+        "--no-acid",
+        help="Skip LLM-based ACID repo analysis even if ANTHROPIC_API_KEY is set",
+    ),
 ):
     try:
         client = GitHubClient(token=token)
     except MissingTokenError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         raise typer.Exit(1)
+
+    acid_client = None if no_acid else create_acid_client()
+    if acid_client is not None:
+        console.print("[dim]ACID repo analysis enabled (ANTHROPIC_API_KEY found).[/dim]")
 
     try:
         authenticated_as = client.whoami()
@@ -125,7 +152,7 @@ def score(
         with console.status("Analyzing repos...") as status:
             for i, raw in enumerate(raw_repos, start=1):
                 status.update(f"Analyzing {raw['name']} ({i}/{len(raw_repos)})...")
-                repo_data = _fetch_repo_data(client, raw)
+                repo_data = _fetch_repo_data(client, raw, acid_client)
                 classifications.append(classify_repo(repo_data, now))
     except RateLimitError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
@@ -197,6 +224,19 @@ def _print_pretty(result: BuildscoreResult) -> None:
     console.print(f"Longest commit streak: {s.longest_streak_days} days")
     console.print()
 
+    acid_repos = [c for c in result.repos if c.repo.acid is not None]
+    if acid_repos:
+        console.print("[bold]ACID repo analysis[/bold]")
+        for c in acid_repos:
+            a = c.repo.acid
+            assert a is not None
+            console.print(f"\n  [bold]{c.repo.name}[/bold] -- {a.summary}")
+            console.print(
+                f"    Architecture {a.architecture}/5 · Cross-Domain {a.cross_domain}/5 · "
+                f"Innovation {a.innovation}/5 · Documentation {a.documentation}/5"
+            )
+        console.print()
+
 
 def _activeness_label(score: float) -> str:
     if score >= ACTIVENESS_LABEL_THRIVING:
@@ -242,6 +282,17 @@ def _serialize(result: BuildscoreResult) -> dict:
                 "is_meaningful": c.is_meaningful,
                 "time_to_ship_days": c.time_to_ship_days,
                 "stars": c.repo.stargazers_count,
+                "acid": (
+                    {
+                        "summary": c.repo.acid.summary,
+                        "architecture": c.repo.acid.architecture,
+                        "cross_domain": c.repo.acid.cross_domain,
+                        "innovation": c.repo.acid.innovation,
+                        "documentation": c.repo.acid.documentation,
+                    }
+                    if c.repo.acid is not None
+                    else None
+                ),
             }
             for c in result.repos
         ],
