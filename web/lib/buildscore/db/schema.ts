@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, jsonb, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, jsonb, primaryKey, serial } from "drizzle-orm/pg-core";
 
 // Per-repo cache, keyed by full_name ("owner/repo", lowercased). On a
 // rescan, if the freshly-listed repo's pushedAt matches this row's, we
@@ -64,4 +64,21 @@ export const githubTokenUsageState = pgTable("github_token_usage_state", {
   remaining: integer("remaining").notNull(),
   resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Microgrants applications. No review-workflow columns (status, reviewer
+// notes, etc.) on purpose -- v0's review path is reading this table
+// directly (Neon's own console), not a built admin UI. buildscoreAtApply is
+// a snapshot, not a live join to user_scores: eligibility was already
+// enforced server-side at submission time, and a snapshot survives the
+// applicant's user_scores row later expiring or being overwritten by a
+// rescan.
+export const grantApplications = pgTable("grant_applications", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull(),
+  projectName: text("project_name").notNull(),
+  pitch: text("pitch").notNull(),
+  email: text("email").notNull(),
+  buildscoreAtApply: integer("buildscore_at_apply").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

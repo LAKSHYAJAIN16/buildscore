@@ -15,6 +15,13 @@
       "when": 1787002365945,
       "tag": "0001_dusty_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787023817523,
+      "tag": "0002_superb_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

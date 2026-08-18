@@ -1,11 +1,15 @@
-// Microgrants program — v0 content and placeholder numbers.
+// Microgrants program — content and placeholder business numbers.
 //
-// Nothing here is wired to a real backend yet: there is no submission form,
-// no database table, no review flow. This file exists so that when the real
-// business decisions (funding amount, cohort size, cadence, eligibility bar)
-// get made, updating the page is a one-file edit instead of a rewrite. See
-// microgrants.md (gitignored, repo root) for the full planning doc these
-// numbers come from.
+// The submission flow itself (form -> POST /api/grants/apply -> Postgres)
+// is real; the numbers below are not final business decisions. This file
+// exists so that when the real ones get made, updating the page is a
+// one-file edit instead of a rewrite. See microgrants.md (gitignored, repo
+// root) for the full planning doc these numbers come from.
+
+// Master switch for the application form. Flip to false between cohort
+// rounds (or before the real numbers below are decided) without touching
+// page logic -- the page falls back to a "not open" state.
+export const APPLICATIONS_OPEN = true;
 
 // Minimum Buildscore required to apply, once applications open. A
 // placeholder, not a researched figure -- picked as roughly the CLI's
@@ -37,6 +41,12 @@ export interface DemoGrantee {
   handle: string;
   oneLiner: string;
 }
+
+// Form field length limits -- generous enough for a real pitch, tight
+// enough to bound what a spam bot can dump into a text column.
+export const MAX_PROJECT_NAME_LENGTH = 80;
+export const MAX_PITCH_LENGTH = 1000;
+export const MAX_EMAIL_LENGTH = 254; // RFC 5321's own limit
 
 export const DEMO_COHORT: DemoGrantee[] = [
   {

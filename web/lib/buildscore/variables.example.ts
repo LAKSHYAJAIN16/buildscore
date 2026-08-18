@@ -217,3 +217,12 @@ export const SCAN_STALE_IN_PROGRESS_MINUTES = 10;
 // Safety cap against a runaway self-continuation chain (e.g. a bug that
 // never converges) -- a scan older than this is force-failed.
 export const SCAN_ABSOLUTE_TIMEOUT_MINUTES = 20;
+
+// --- Web-only: microgrants (api/grants/apply, lib/grants/*) ---
+
+// Per-IP rate limit on POST /api/grants/apply. Cheaper than a scan (no
+// GitHub calls -- eligibility is a read of an already-computed score), but
+// still a mutating, spam-attractive endpoint given it solicits money
+// requests -- kept tight.
+export const RATE_LIMIT_GRANTS_MAX_REQUESTS = 3;
+export const RATE_LIMIT_GRANTS_WINDOW_SECONDS = 3600;
