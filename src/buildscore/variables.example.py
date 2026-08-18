@@ -168,18 +168,23 @@ AI_LEVERAGE_COMMIT_WEIGHT = 60  # scaled by fraction of sampled commits with an 
 # --- ACID repo analysis (acid.py) ---
 #
 # LLM-based per-repo analysis -- our version of what GitRoll calls ACID
-# (Architecture, Cross-Domain, Innovation, Documentation). Runs against a
-# local Ollama instance (open-source model, zero per-call cost) rather than
-# a paid hosted API -- genuinely optional: requires Ollama running locally
-# with ACID_MODEL pulled (`ollama pull <model>`). Without it, ambition
-# silently falls back to the old language/size heuristic
+# (Architecture, Cross-Domain, Innovation, Documentation). Runs against
+# Groq's hosted API serving open-source models (real elastic scaling via
+# Groq's own GPUs, much cheaper per-token than Claude/GPT) rather than
+# local inference -- a local Ollama instance was tried first but rejected:
+# running LLM inference on the same small VPS the web app deploys to
+# doesn't scale, and standing up dedicated GPU infra to make it scale would
+# cost more than just paying a cheap hosted API. Genuinely optional:
+# requires GROQ_API_KEY (free tier available at console.groq.com). Without
+# it, ambition silently falls back to the old language/size heuristic
 # (_repo_ambition_score's original behavior) -- this must never be a hard
 # requirement for the CLI to work.
 
-# Any locally-pulled Ollama model tag. llama3.1:8b is a reasonable default
-# balance of quality and speed on modest hardware for this task (rating +
-# a short summary) -- swap freely for whatever's already pulled.
-ACID_MODEL = "llama3.1:8b"
+# Any Groq-hosted model tag -- check console.groq.com/docs/models for the
+# current catalog, it changes over time. llama-3.1-8b-instant is a fast,
+# cheap default; swap for a larger Groq-hosted model if quality matters
+# more than latency/cost for your use.
+ACID_MODEL = "llama-3.1-8b-instant"
 ACID_MAX_OUTPUT_TOKENS = 400
 # READMEs are truncated before being sent to the LLM -- bounds both cost and
 # the chance of prompt injection from an untrusted README having enough

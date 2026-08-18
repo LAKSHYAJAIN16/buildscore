@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 
 import httpx
-import ollama
+import openai
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -60,7 +60,7 @@ def _base_repo_data(raw_repo: dict, **overrides) -> RepoData:
 
 
 def _fetch_repo_data(
-    client: GitHubClient, raw_repo: dict, acid_client: ollama.Client | None
+    client: GitHubClient, raw_repo: dict, acid_client: openai.OpenAI | None
 ) -> RepoData:
     # Repos too small/trivial to be worth the ~6-7 extra API calls are
     # scored 0 directly, without ever touching the network for them.
@@ -159,7 +159,7 @@ def score(
     no_acid: bool = typer.Option(
         False,
         "--no-acid",
-        help="Skip LLM-based ACID repo analysis even if Ollama is reachable",
+        help="Skip LLM-based ACID repo analysis even if GROQ_API_KEY is set",
     ),
 ):
     try:
@@ -170,7 +170,7 @@ def score(
 
     acid_client = None if no_acid else create_acid_client()
     if acid_client is not None:
-        console.print("[dim]ACID repo analysis enabled (Ollama reachable).[/dim]")
+        console.print("[dim]ACID repo analysis enabled (GROQ_API_KEY found).[/dim]")
 
     try:
         authenticated_as = client.whoami()
