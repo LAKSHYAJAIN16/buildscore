@@ -168,13 +168,18 @@ AI_LEVERAGE_COMMIT_WEIGHT = 60  # scaled by fraction of sampled commits with an 
 # --- ACID repo analysis (acid.py) ---
 #
 # LLM-based per-repo analysis -- our version of what GitRoll calls ACID
-# (Architecture, Cross-Domain, Innovation, Documentation). Genuinely
-# optional: requires ANTHROPIC_API_KEY. Without it, ambition silently falls
-# back to the old language/size heuristic (_repo_ambition_score's original
-# behavior) -- this is the one part of the pipeline with a real per-scan
-# cost, so it must never be a hard requirement for the CLI to work.
+# (Architecture, Cross-Domain, Innovation, Documentation). Runs against a
+# local Ollama instance (open-source model, zero per-call cost) rather than
+# a paid hosted API -- genuinely optional: requires Ollama running locally
+# with ACID_MODEL pulled (`ollama pull <model>`). Without it, ambition
+# silently falls back to the old language/size heuristic
+# (_repo_ambition_score's original behavior) -- this must never be a hard
+# requirement for the CLI to work.
 
-ACID_MODEL = "claude-haiku-4-5-20251001"
+# Any locally-pulled Ollama model tag. llama3.1:8b is a reasonable default
+# balance of quality and speed on modest hardware for this task (rating +
+# a short summary) -- swap freely for whatever's already pulled.
+ACID_MODEL = "llama3.1:8b"
 ACID_MAX_OUTPUT_TOKENS = 400
 # READMEs are truncated before being sent to the LLM -- bounds both cost and
 # the chance of prompt injection from an untrusted README having enough
