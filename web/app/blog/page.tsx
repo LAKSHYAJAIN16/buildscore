@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "motion/react";
 
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
-import { POSTS } from "@/lib/blog/posts";
+import { formatPublishedDate, sortedPosts } from "@/lib/blog/posts";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -16,6 +17,8 @@ const fadeUp = {
     transition: { duration: 0.6, delay, ease: EASE },
   }),
 };
+
+const POSTS = sortedPosts();
 
 export default function BlogPage() {
   return (
@@ -54,15 +57,15 @@ export default function BlogPage() {
             >
               {POSTS.map((post) => (
                 <li key={post.slug} className="py-6">
-                  <p className="font-condensed text-xl font-semibold">{post.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {new Date(post.publishedAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-                  <p className="mt-2 text-base leading-7 text-muted-foreground">{post.excerpt}</p>
+                  <Link href={`/blog/${post.slug}`} className="group">
+                    <p className="font-condensed text-xl font-semibold underline-offset-4 group-hover:underline">
+                      {post.title}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatPublishedDate(post.publishedAt)}
+                    </p>
+                    <p className="mt-2 text-base leading-7 text-muted-foreground">{post.excerpt}</p>
+                  </Link>
                 </li>
               ))}
             </motion.ul>
