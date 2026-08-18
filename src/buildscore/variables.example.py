@@ -8,7 +8,7 @@ all import from here instead of defining their own).
 This is the committed template. Copy it to variables.py (gitignored) and
 tune freely -- keeping the exact thresholds out of the public repo raises
 the bar against gaming the score (same reasoning as the "Anti-Gaming"
-section of the original design doc).
+section of the original design doc, docs/VISION.md).
 """
 
 from __future__ import annotations

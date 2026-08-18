@@ -9,7 +9,7 @@
  * This is the committed template. Copy it to variables.ts (gitignored) and
  * tune freely -- keeping the exact thresholds out of the public repo raises
  * the bar against gaming the score (same reasoning as the "Anti-Gaming"
- * section of the original design doc, and the same split src/buildscore's
+ * section of docs/VISION.md, and the same split src/buildscore's
  * variables.py/variables.example.py already use).
  */
 
