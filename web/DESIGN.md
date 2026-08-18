@@ -62,9 +62,11 @@ warm charcoal or cyanotype blue before).
   sticky header gains a subtle border + soft shadow (`transition-shadow`) — an elevation
   signal, not a redesign of the flat resting state.
 - `BuildscoreMark` (`icons.tsx`) — the logomark, used in the header, footer, `HowItWorks`'
-  chat avatar, and `app/icon.tsx` (favicon). Three ascending rounded bars, same shape
-  language as the Builder Vector's own dimension bars — deliberately not a lettermark ("B"),
-  and not a generic icon-library glyph. Replaced the earlier placeholder "B" monogram.
+  chat avatar, and `app/icon.tsx` (favicon). An outlined rounded square (a sketch, an idea)
+  offset against a solid rounded square (the same shape, actually built) — a direct glyph
+  for "making things exist," not a bar-chart/growth cliché, a lettermark ("B"), or a generic
+  icon-library glyph. Replaced first a placeholder "B" monogram, then a three-ascending-bars
+  version that read as too generic/analytics-dashboard-y.
 - `BackgroundFX.tsx` — layered soft `radial-gradient`s only, no grid, no blobs-with-blur
   physics, no scanline. Purely atmospheric.
 

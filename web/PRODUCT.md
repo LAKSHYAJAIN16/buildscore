@@ -30,7 +30,7 @@ CLI-first (`pip install`-able, `buildscore score <username> --pretty`), requires
 
 ## Brand Commitments
 
-Name: "Buildscore". Wordmark: a circular mark (three ascending rounded bars, echoing the Builder Vector's own dimension bars — not a lettermark) + "Buildscore" text. Open source (repo linked in footer: github.com/LAKSHYAJAIN16/buildscore).
+Name: "Buildscore". Wordmark: a circular mark (an outlined square and a solid square offset toward each other — a sketch becoming a built thing — not a lettermark, not a bar chart) + "Buildscore" text. Open source (repo linked in footer: github.com/LAKSHYAJAIN16/buildscore).
 
 ## Evidence on Hand
 

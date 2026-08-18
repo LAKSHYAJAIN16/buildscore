@@ -1,14 +1,13 @@
 import type { SVGProps } from "react";
 
-/** Three ascending rounded bars — the same shape language as the Builder
- * Vector's own dimension bars, standing in for "shipping progress" rather
- * than a generic letterform. */
+/** An outlined square (a sketch, an idea) and a solid one (the same shape,
+ * actually built) offset toward each other — "making things exist" as a
+ * glyph, not a bar chart or a lettermark. */
 export function BuildscoreMark(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
-      <rect x="3.5" y="12" width="4.5" height="8" rx="2.25" />
-      <rect x="9.75" y="7" width="4.5" height="13" rx="2.25" />
-      <rect x="16" y="2" width="4.5" height="18" rx="2.25" />
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <rect x="2" y="9" width="9" height="9" rx="2.5" stroke="currentColor" strokeWidth="2" />
+      <rect x="12" y="3" width="10" height="10" rx="2.75" fill="currentColor" />
     </svg>
   );
 }
