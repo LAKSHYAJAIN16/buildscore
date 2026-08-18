@@ -6,6 +6,7 @@ const EXPLORE_LINKS = [
   { href: "/", label: "home" },
   { href: "/thesis", label: "thesis" },
   { href: "/grants", label: "microgrants" },
+  { href: "/blog", label: "blog" },
 ];
 
 export function SiteFooter() {
