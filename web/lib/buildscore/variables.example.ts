@@ -178,6 +178,37 @@ export const AI_COMMIT_SAMPLE_SIZE = 50; // most recent commits sampled per repo
 export const AI_LEVERAGE_CONFIG_POINTS = 40; // flat bonus if any AI config file is present
 export const AI_LEVERAGE_COMMIT_WEIGHT = 60; // scaled by fraction of sampled commits with an AI signal
 
+// --- ACID repo analysis (acid.ts) ---
+//
+// LLM-based per-repo analysis -- our version of what GitRoll calls ACID
+// (Architecture, Cross-Domain, Innovation, Documentation). Runs against
+// Groq's hosted API serving open-source models -- real elastic scaling via
+// Groq's own GPUs, much cheaper per-token than Claude/GPT, and (unlike a
+// local Ollama instance) actually workable from a serverless/small-VPS web
+// deployment. Genuinely optional: requires GROQ_API_KEY. Without it,
+// ambition/quality silently fall back to the pre-existing heuristics
+// alone -- this must never be a hard requirement for a scan to complete.
+// Cached alongside everything else in repos_cache: unchanged pushedAt means
+// a cache hit skips the Groq call entirely, same as every other sub-resource.
+
+// Any Groq-hosted model tag -- check console.groq.com/docs/models for the
+// current catalog, it changes over time. Matches the Python CLI's default.
+export const ACID_MODEL = "llama-3.1-8b-instant";
+export const ACID_MAX_OUTPUT_TOKENS = 400;
+// READMEs are truncated before being sent to the LLM -- bounds both cost
+// and the chance of prompt injection from an untrusted README having
+// enough room to do anything sophisticated.
+export const ACID_README_MAX_CHARS = 4000;
+// Ambition = this fraction from the ACID sub-scores (Architecture,
+// Cross-Domain, Innovation; Documentation feeds Quality instead, see
+// scoring.ts) blended with the pre-existing language/size heuristic, when
+// both are available. When ACID isn't available, ambition is 100% the
+// heuristic, unchanged from before.
+export const ACID_AMBITION_BLEND_WEIGHT = 0.7;
+// Documentation sub-score's contribution to Quality's structure score,
+// alongside tests/CI/license presence -- see QUALITY_STRUCTURE_* above.
+export const ACID_QUALITY_DOCUMENTATION_POINTS = 25;
+
 // --- Web-only: scan orchestration (pipeline.ts, api/scan/*) ---
 //
 // The CLI runs one scan at a time, synchronously, with no duration limit.

@@ -4,6 +4,20 @@ export interface Release {
   publishedAt: Date;
 }
 
+// LLM-generated per-repo analysis -- GitRoll calls their version of this
+// ACID (Architecture, Cross-Domain, Innovation, Documentation); ours isn't
+// trademarked so no (c). Each sub-score is 1-5. `summary` is a 1-2 sentence
+// plain-English description of what the repo does and why it scored the
+// way it did -- shown to the user, not just folded into a number. Mirrors
+// src/buildscore/models.py's AcidAnalysis exactly.
+export interface AcidAnalysis {
+  summary: string;
+  architecture: number;
+  crossDomain: number;
+  innovation: number;
+  documentation: number;
+}
+
 export interface RepoData {
   name: string;
   fullName: string;
@@ -19,6 +33,8 @@ export interface RepoData {
   codeFrequency: number[][];
   rootEntries: string[];
   recentCommitMessages: string[];
+  description: string | null;
+  acid: AcidAnalysis | null;
 }
 
 export interface CommitActivityWeek {
@@ -79,6 +95,7 @@ export interface RawGithubRepo {
   size: number;
   stargazers_count: number;
   owner: { login: string };
+  description: string | null;
 }
 
 export interface RawGithubRelease {

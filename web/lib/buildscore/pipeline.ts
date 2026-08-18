@@ -3,6 +3,9 @@
 // needs it as its own module because it also has to survive being resumed
 // across multiple chunked serverless invocations.
 
+import type OpenAI from "openai";
+
+import { analyzeRepo, createAcidClient } from "./acid";
 import { runWithConcurrency } from "./concurrency";
 import {
   createGitHubClient,
@@ -47,13 +50,16 @@ function baseRepoData(raw: RawGithubRepo, overrides?: Partial<RepoData>): RepoDa
     codeFrequency: [],
     rootEntries: [],
     recentCommitMessages: [],
+    description: raw.description,
+    acid: null,
     ...overrides,
   };
 }
 
 async function getOrFetchRepoData(
   client: ReturnType<typeof createGitHubClient>,
-  raw: RawGithubRepo
+  raw: RawGithubRepo,
+  acidClient: OpenAI | null
 ): Promise<RepoData> {
   if (!isRepoWorthFullAnalysis(raw.size, raw.fork)) {
     // Repos too small/trivial to be worth the ~6 extra API calls are scored
@@ -66,7 +72,9 @@ async function getOrFetchRepoData(
   const pushedAt = new Date(raw.pushed_at);
 
   if (cached && cached.pushedAt.getTime() === pushedAt.getTime()) {
-    // Unchanged since we last saw it -- skip all 6 extra GitHub calls.
+    // Unchanged since we last saw it -- skip all 6 extra GitHub calls
+    // (including the ACID readme fetch + Groq call, cached alongside
+    // everything else).
     return baseRepoData(raw, {
       languages: cached.languages,
       releases: cached.releases.filter(
@@ -76,6 +84,7 @@ async function getOrFetchRepoData(
       codeFrequency: cached.codeFrequency,
       rootEntries: cached.rootEntries,
       recentCommitMessages: cached.recentCommitMessages,
+      acid: cached.acid,
     });
   }
 
@@ -96,6 +105,18 @@ async function getOrFetchRepoData(
     .map((r) => ({ publishedAt: new Date(r.published_at as string) }))
     .sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime());
 
+  let acid = null as RepoData["acid"];
+  if (acidClient) {
+    const readme = await client.readme(owner, name);
+    acid = await analyzeRepo(acidClient, {
+      name,
+      description: raw.description,
+      languages: Object.keys(languages),
+      rootEntries,
+      readme,
+    });
+  }
+
   // Write the cache immediately, per repo -- not batched at scan end -- so
   // a scan interrupted by rate limiting or a timeout still leaves useful,
   // reusable cache behind for the next attempt.
@@ -115,6 +136,7 @@ async function getOrFetchRepoData(
     codeFrequency,
     rootEntries,
     recentCommitMessages,
+    acid,
   });
 
   return baseRepoData(raw, {
@@ -124,6 +146,7 @@ async function getOrFetchRepoData(
     codeFrequency,
     rootEntries,
     recentCommitMessages,
+    acid,
   });
 }
 
@@ -137,6 +160,7 @@ export async function runScanChunk(username: string): Promise<void> {
   }
 
   const client = createGitHubClient(process.env.GITHUB_TOKEN);
+  const acidClient = createAcidClient();
   let snapshot = job.repoListingSnapshot;
   let processedIndex = job.progress?.processedIndex ?? 0;
 
@@ -162,7 +186,9 @@ export async function runScanChunk(username: string): Promise<void> {
   try {
     while (processedIndex < snapshot.length && Date.now() - chunkStart < SCAN_CHUNK_TIME_BUDGET_MS) {
       const batch = snapshot.slice(processedIndex, processedIndex + CONCURRENT_REPO_FETCHES);
-      await runWithConcurrency(batch, CONCURRENT_REPO_FETCHES, (raw) => getOrFetchRepoData(client, raw));
+      await runWithConcurrency(batch, CONCURRENT_REPO_FETCHES, (raw) =>
+        getOrFetchRepoData(client, raw, acidClient)
+      );
       processedIndex += batch.length;
       await updateScanProgress(username, { processedIndex, total: snapshot.length });
     }
@@ -201,12 +227,14 @@ export async function runScanChunk(username: string): Promise<void> {
 
 async function finalizeScan(username: string, snapshot: RawGithubRepo[]): Promise<void> {
   const now = new Date();
-  // Every repo here was already fetched (and cached) by the chunk loop
-  // above, so this is a cache-read pass only -- no further GitHub calls.
+  // Every repo here was already fetched (and cached, including ACID) by
+  // the chunk loop above, so this is a cache-read pass only -- no further
+  // GitHub or Groq calls.
   const client = createGitHubClient(process.env.GITHUB_TOKEN);
+  const acidClient = createAcidClient();
   const classifications: RepoClassification[] = [];
   for (const raw of snapshot) {
-    const repoData = await getOrFetchRepoData(client, raw);
+    const repoData = await getOrFetchRepoData(client, raw, acidClient);
     classifications.push(classifyRepo(repoData, now));
   }
 

@@ -24,6 +24,18 @@ export const reposCache = pgTable("repos_cache", {
   // (pushedAt unchanged) doesn't silently lose these dimensions.
   rootEntries: jsonb("root_entries").notNull().$type<string[]>(),
   recentCommitMessages: jsonb("recent_commit_messages").notNull().$type<string[]>(),
+  // ACID analysis (acid.ts) -- nullable, since it's genuinely optional
+  // (no GROQ_API_KEY -> stays null forever for this row) and because a row
+  // cached before ACID existed simply has no value here yet. A cache hit
+  // (pushedAt unchanged) reuses whatever's here, including null -- same
+  // staleness tradeoff already accepted for every other cached field.
+  acid: jsonb("acid").$type<{
+    summary: string;
+    architecture: number;
+    crossDomain: number;
+    innovation: number;
+    documentation: number;
+  } | null>(),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

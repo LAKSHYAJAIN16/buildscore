@@ -47,6 +47,15 @@ export function serializeResult(result: BuildscoreResult) {
       isMeaningful: c.isMeaningful,
       timeToShipDays: c.timeToShipDays,
       stars: c.repo.stargazersCount,
+      acid: c.repo.acid
+        ? {
+            summary: c.repo.acid.summary,
+            architecture: c.repo.acid.architecture,
+            crossDomain: c.repo.acid.crossDomain,
+            innovation: c.repo.acid.innovation,
+            documentation: c.repo.acid.documentation,
+          }
+        : null,
     })),
   };
 }

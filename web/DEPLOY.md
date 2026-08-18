@@ -37,6 +37,7 @@ as `web/.env.example`):
 | `DATABASE_URL` | Your Neon connection string (unchanged from local dev) |
 | `INTERNAL_WORKER_SECRET` | `openssl rand -hex 32` |
 | `APP_BASE_URL` | The public URL Coolify assigns/you configure for this app, e.g. `https://buildscore.yourdomain.com` — **not** `localhost`; this is used server-side to call the app's own `/api/scan/worker` route |
+| `GROQ_API_KEY` | Optional. Enables ACID repo analysis via Groq's hosted API (free tier at console.groq.com) — everything else works without it. Deliberately *not* a locally-run model: a small Hetzner instance has no spare capacity to run LLM inference alongside the web app, and Groq's own infra is what actually scales here, not this VPS |
 
 ## 4. Run migrations against Neon
 

@@ -161,6 +161,22 @@ export class GitHubClient {
     return body.map((c) => c.commit.message);
   }
 
+  // Decoded README text, or "" if the repo has none. Feeds the ACID
+  // analysis (see acid.ts) -- not used for anything else, so a missing
+  // README is not an error.
+  async readme(owner: string, repo: string): Promise<string> {
+    const resp = await this._get(`/repos/${owner}/${repo}/readme`);
+    if (resp.status === 404) return "";
+    if (!resp.ok) throw new Error(`GitHub readme failed: ${resp.status}`);
+    const body = (await resp.json()) as { content?: string };
+    if (!body.content) return "";
+    try {
+      return Buffer.from(body.content, "base64").toString("utf-8");
+    } catch {
+      return "";
+    }
+  }
+
   // GitHub computes these stats asynchronously on first request and returns
   // 202 until the cache is warm.
   private async _getStats(path: string): Promise<unknown[]> {

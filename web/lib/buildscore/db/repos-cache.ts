@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "./client";
 import { reposCache } from "./schema";
-import type { RepoData } from "../models";
+import type { AcidAnalysis, RepoData } from "../models";
 
 export interface CachedRepo {
   pushedAt: Date;
@@ -12,6 +12,7 @@ export interface CachedRepo {
   codeFrequency: number[][];
   rootEntries: string[];
   recentCommitMessages: string[];
+  acid: AcidAnalysis | null;
 }
 
 export async function getCachedRepo(fullName: string): Promise<CachedRepo | null> {
@@ -30,6 +31,7 @@ export async function getCachedRepo(fullName: string): Promise<CachedRepo | null
     codeFrequency: row.codeFrequency,
     rootEntries: row.rootEntries,
     recentCommitMessages: row.recentCommitMessages,
+    acid: row.acid ?? null,
   };
 }
 
@@ -49,6 +51,7 @@ export interface UpsertCachedRepoInput {
   codeFrequency: number[][];
   rootEntries: string[];
   recentCommitMessages: string[];
+  acid: AcidAnalysis | null;
 }
 
 export async function upsertCachedRepo(input: UpsertCachedRepoInput): Promise<void> {
@@ -68,6 +71,7 @@ export async function upsertCachedRepo(input: UpsertCachedRepoInput): Promise<vo
     codeFrequency: input.codeFrequency,
     rootEntries: input.rootEntries,
     recentCommitMessages: input.recentCommitMessages,
+    acid: input.acid,
     updatedAt: new Date(),
   };
 

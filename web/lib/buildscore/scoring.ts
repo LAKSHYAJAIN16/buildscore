@@ -2,6 +2,8 @@
 
 import type { BuilderStats, BuilderVector, RepoClassification, RepoData } from "./models";
 import {
+  ACID_AMBITION_BLEND_WEIGHT,
+  ACID_QUALITY_DOCUMENTATION_POINTS,
   ACTIVENESS_GRAVEYARD_THRESHOLD,
   AI_CONFIG_FILENAMES,
   AI_LEVERAGE_COMMIT_WEIGHT,
@@ -108,7 +110,17 @@ function repoAmbitionScore(repo: RepoData): number {
     AMBITION_LANGUAGE_BONUS;
   const langDiversity = Math.min(AMBITION_DIVERSITY_CAP, languages.length * AMBITION_DIVERSITY_PER_LANGUAGE);
   const sizeScore = Math.min(AMBITION_SIZE_CAP, repo.sizeKb / AMBITION_SIZE_DIVISOR_KB);
-  return Math.min(100, langBonus + langDiversity + sizeScore);
+  const heuristicScore = Math.min(100, langBonus + langDiversity + sizeScore);
+
+  if (!repo.acid) return heuristicScore;
+
+  // ACID's Architecture/Cross-Domain/Innovation sub-scores are real
+  // content-informed judgment (see acid.ts) -- when available, they
+  // dominate the blend; the old language/size heuristic still contributes
+  // so one LLM call can't single-handedly swing the score to an extreme.
+  const acidComponent =
+    (mean([repo.acid.architecture, repo.acid.crossDomain, repo.acid.innovation]) / 5) * 100;
+  return ACID_AMBITION_BLEND_WEIGHT * acidComponent + (1 - ACID_AMBITION_BLEND_WEIGHT) * heuristicScore;
 }
 
 // 100 for dead-steady week-to-week churn, decaying toward 0 as the
@@ -128,10 +140,16 @@ function churnStabilityScore(codeFrequency: number[][]): number {
 }
 
 function repoQualityScore(repo: RepoData): number {
-  const structurePoints =
+  let structurePoints =
     (hasAny(repo.rootEntries, QUALITY_TEST_DIR_NAMES) ? QUALITY_STRUCTURE_TEST_POINTS : 0) +
     (hasAny(repo.rootEntries, QUALITY_CI_INDICATORS) ? QUALITY_STRUCTURE_CI_POINTS : 0) +
     (hasAny(repo.rootEntries, QUALITY_LICENSE_NAMES) ? QUALITY_STRUCTURE_LICENSE_POINTS : 0);
+  if (repo.acid) {
+    // ACID's Documentation sub-score is a real read of the README's
+    // quality, not just "does one exist" -- a graded contribution rather
+    // than the flat presence bonuses above.
+    structurePoints += (repo.acid.documentation / 5) * ACID_QUALITY_DOCUMENTATION_POINTS;
+  }
   const structureScore = Math.min(100, structurePoints);
   const stabilityScore = churnStabilityScore(repo.codeFrequency);
 
