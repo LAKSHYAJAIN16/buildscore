@@ -10,3 +10,4 @@ dist/
 # internal notes, not for the public repo
 conversation_history.md
 design.md
+algorithm.md
