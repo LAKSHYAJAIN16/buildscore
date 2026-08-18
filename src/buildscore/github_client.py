@@ -6,7 +6,13 @@ from datetime import datetime, timezone
 
 import httpx
 
-from .variables import RATE_LIMIT_SAFETY_MARGIN, STATS_MAX_RETRIES, STATS_RETRY_BACKOFF_SECONDS
+from .variables import (
+    RATE_LIMIT_SAFETY_MARGIN,
+    STATS_MAX_RETRIES,
+    STATS_RETRY_BACKOFF_SECONDS,
+    TRANSPORT_ERROR_MAX_RETRIES,
+    TRANSPORT_ERROR_RETRY_BACKOFF_SECONDS,
+)
 
 GITHUB_API = "https://api.github.com"
 
@@ -53,7 +59,7 @@ class GitHubClient:
 
     def _get(self, url: str, **kwargs) -> httpx.Response:
         self.calls_made += 1
-        resp = self._client.get(url, **kwargs)
+        resp = self._request_with_retry(url, **kwargs)
         self._record_rate_limit(resp)
         if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
             reset = self.rate_limit_reset.isoformat() if self.rate_limit_reset else "unknown"
@@ -68,6 +74,23 @@ class GitHubClient:
                 f"(stopping before hitting the limit). Resets at {reset}."
             )
         return resp
+
+    def _request_with_retry(self, url: str, **kwargs) -> httpx.Response:
+        # Transient transport failures (DNS hiccups, dropped connections)
+        # are common on long scans with many sequential requests -- retry a
+        # few times with backoff before giving up. Distinct from
+        # _get_stats's 202-polling loop, which retries a *successful*
+        # response that just isn't ready yet.
+        last_exc: httpx.TransportError | None = None
+        for attempt in range(TRANSPORT_ERROR_MAX_RETRIES):
+            try:
+                return self._client.get(url, **kwargs)
+            except httpx.TransportError as exc:
+                last_exc = exc
+                if attempt < TRANSPORT_ERROR_MAX_RETRIES - 1:
+                    time.sleep(TRANSPORT_ERROR_RETRY_BACKOFF_SECONDS * (attempt + 1))
+        assert last_exc is not None
+        raise last_exc
 
     def _record_rate_limit(self, resp: httpx.Response) -> None:
         limit = resp.headers.get("X-RateLimit-Limit")

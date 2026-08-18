@@ -4,6 +4,8 @@ import {
   RATE_LIMIT_SAFETY_MARGIN,
   STATS_MAX_RETRIES,
   STATS_RETRY_BACKOFF_SECONDS,
+  TRANSPORT_ERROR_MAX_RETRIES,
+  TRANSPORT_ERROR_RETRY_BACKOFF_SECONDS,
 } from "./variables";
 import type { RawGithubRelease, RawGithubRepo } from "./models";
 
@@ -49,13 +51,7 @@ export class GitHubClient {
     }
 
     this.callsMade += 1;
-    const resp = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
+    const resp = await this._fetchWithRetry(url);
     this._recordRateLimit(resp);
 
     if (resp.status === 403 && resp.headers.get("x-ratelimit-remaining") === "0") {
@@ -69,6 +65,32 @@ export class GitHubClient {
       );
     }
     return resp;
+  }
+
+  // Transient network failures (DNS hiccups, dropped connections) are
+  // common across the many sequential requests a scan makes -- retry a few
+  // times with backoff before giving up. Distinct from _getStats's
+  // 202-polling loop, which retries a *successful* response that isn't
+  // ready yet, not a network-level failure.
+  private async _fetchWithRetry(url: URL): Promise<Response> {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < TRANSPORT_ERROR_MAX_RETRIES; attempt++) {
+      try {
+        return await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+            Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+          },
+        });
+      } catch (err) {
+        lastErr = err;
+        if (attempt < TRANSPORT_ERROR_MAX_RETRIES - 1) {
+          await sleep(TRANSPORT_ERROR_RETRY_BACKOFF_SECONDS * 1000 * (attempt + 1));
+        }
+      }
+    }
+    throw lastErr;
   }
 
   private _recordRateLimit(resp: Response): void {

@@ -37,6 +37,12 @@ export const RATE_LIMIT_SAFETY_MARGIN = 20;
 export const STATS_MAX_RETRIES = 8;
 export const STATS_RETRY_BACKOFF_SECONDS = 2;
 
+// Transient transport failures (DNS resolution hiccups, dropped
+// connections) observed in practice on long scans with many sequential
+// requests -- retried separately from the 202-polling loop above.
+export const TRANSPORT_ERROR_MAX_RETRIES = 3;
+export const TRANSPORT_ERROR_RETRY_BACKOFF_SECONDS = 2;
+
 // --- Security / suspicious usage detection (security.ts) ---
 
 // Allowed slack (in API calls) between expected and actual remaining quota
