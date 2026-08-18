@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 
@@ -79,6 +79,16 @@ class BuilderVector:
 
 
 @dataclass
+class NotableContribution:
+    """An external repo (not owned by the scanned user) they have at least
+    one merged PR in -- GitHub's Search API only, no cloning/scanning."""
+
+    repo_full_name: str
+    stars: int
+    merged_pr_count: int
+
+
+@dataclass
 class BuildscoreResult:
     username: str
     generated_at: datetime
@@ -86,3 +96,4 @@ class BuildscoreResult:
     vector: BuilderVector
     score: float
     repos: list[RepoClassification]
+    notable_contributions: list[NotableContribution] = field(default_factory=list)

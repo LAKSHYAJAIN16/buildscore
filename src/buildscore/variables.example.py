@@ -203,3 +203,18 @@ SCORE_TIER_S = 75
 SCORE_TIER_A = 60
 SCORE_TIER_B = 45
 # below SCORE_TIER_B is tier "C"
+
+# --- Notable contributions (cli.py) ---
+#
+# External repos (not owned by the scanned user) they have at least one
+# merged PR in -- GitHub Search API only, no cloning. Display-only social
+# proof, not used in scoring math (unlike GitRoll, we don't fold this into
+# the Influence-style dimension yet -- see conversation_history.md).
+
+# How many of the user's most recent merged PRs to scan (one Search API
+# call, capped well under its 30/min limit regardless of this value).
+NOTABLE_CONTRIBUTIONS_SEARCH_LIMIT = 100
+# How many distinct external repos to show, ranked by merged PR count.
+# Each one costs one extra core API call (for its star count) -- keep this
+# small.
+NOTABLE_CONTRIBUTIONS_TOP_N = 5

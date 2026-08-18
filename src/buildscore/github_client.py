@@ -151,6 +151,36 @@ class GitHubClient:
     def code_frequency(self, owner: str, repo: str) -> list[list[int]]:
         return self._get_stats(f"/repos/{owner}/{repo}/stats/code_frequency")
 
+    def search_merged_prs(self, username: str, limit: int) -> list[dict]:
+        """Merged PRs authored by `username`, most recent first.
+
+        Uses GitHub's Search API, which has its own separate, much lower
+        rate-limit bucket (30 req/min) than core REST calls -- goes through
+        `_get_search` rather than `_get` so its rate-limit headers never
+        overwrite the core-bucket tracking `_get`'s safety check relies on
+        (mixing the two would make that check trip prematurely after a
+        single search call, even with thousands of core calls left)."""
+        resp = self._get_search(
+            "/search/issues",
+            params={
+                "q": f"author:{username} type:pr is:merged",
+                "per_page": min(limit, 100),
+                "sort": "created",
+                "order": "desc",
+            },
+        )
+        resp.raise_for_status()
+        return resp.json().get("items", [])
+
+    def repo_stars(self, owner: str, repo: str) -> int:
+        resp = self._get(f"/repos/{owner}/{repo}")
+        resp.raise_for_status()
+        return resp.json().get("stargazers_count", 0)
+
+    def _get_search(self, url: str, **kwargs) -> httpx.Response:
+        self.calls_made += 1
+        return self._request_with_retry(url, **kwargs)
+
     def readme(self, owner: str, repo: str) -> str:
         """Decoded README text, or "" if the repo has none. Feeds the ACID
         analysis (see acid.py) -- not used for anything else, so a missing

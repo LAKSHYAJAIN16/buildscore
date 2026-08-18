@@ -12,7 +12,7 @@ from rich.table import Table
 from .acid import analyze_repo, create_acid_client
 from .github_client import GitHubClient, MissingTokenError, RateLimitError
 from .lifecycle import classify_repo, is_repo_worth_full_analysis
-from .models import BuildscoreResult, Release, RepoData
+from .models import BuildscoreResult, NotableContribution, Release, RepoData
 from .scoring import compute_score, compute_stats, compute_vector
 from .security import check_for_suspicious_drift
 from .variables import (
@@ -21,6 +21,8 @@ from .variables import (
     ACTIVENESS_LABEL_THRIVING,
     AI_COMMIT_SAMPLE_SIZE,
     DEFAULT_MAX_REPOS,
+    NOTABLE_CONTRIBUTIONS_SEARCH_LIMIT,
+    NOTABLE_CONTRIBUTIONS_TOP_N,
     SCORE_TIER_A,
     SCORE_TIER_B,
     SCORE_TIER_S,
@@ -108,6 +110,42 @@ def _fetch_repo_data(
     )
 
 
+def _fetch_notable_contributions(
+    client: GitHubClient, username: str, own_repo_full_names: set[str]
+) -> list[NotableContribution]:
+    """External repos the user has merged PRs in, ranked by merged-PR count.
+    Best-effort: any Search API failure (rate limit, network, unexpected
+    response shape) degrades to an empty list rather than aborting the scan,
+    same philosophy as ACID's graceful degradation."""
+    try:
+        items = client.search_merged_prs(username, NOTABLE_CONTRIBUTIONS_SEARCH_LIMIT)
+    except Exception:
+        return []
+
+    counts: dict[str, int] = {}
+    for item in items:
+        repo_url = item.get("repository_url", "")
+        parts = repo_url.rstrip("/").split("/")
+        full_name = "/".join(parts[-2:]) if len(parts) >= 2 else ""
+        if not full_name or full_name.lower() in own_repo_full_names:
+            continue
+        counts[full_name] = counts.get(full_name, 0) + 1
+
+    ranked = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:NOTABLE_CONTRIBUTIONS_TOP_N]
+
+    contributions = []
+    for full_name, count in ranked:
+        owner, _, repo = full_name.partition("/")
+        try:
+            stars = client.repo_stars(owner, repo)
+        except Exception:
+            stars = 0
+        contributions.append(
+            NotableContribution(repo_full_name=full_name, stars=stars, merged_pr_count=count)
+        )
+    return contributions
+
+
 @app.command()
 def score(
     username: str,
@@ -145,19 +183,24 @@ def score(
         console.print("[dim]Could not verify token identity (continuing anyway).[/dim]")
 
     now = datetime.now(timezone.utc)
+    all_raw_repos: list[dict] = []
     raw_repos: list[dict] = []
     classifications = []
+    notable_contributions: list[NotableContribution] = []
     try:
         with console.status(f"Fetching repos for {username}..."):
-            raw_repos = client.list_repos(username)
+            all_raw_repos = client.list_repos(username)
 
-        raw_repos = [r for r in raw_repos if not r["fork"]][:max_repos]
+        raw_repos = [r for r in all_raw_repos if not r["fork"]][:max_repos]
 
         with console.status("Analyzing repos...") as status:
             for i, raw in enumerate(raw_repos, start=1):
                 status.update(f"Analyzing {raw['name']} ({i}/{len(raw_repos)})...")
                 repo_data = _fetch_repo_data(client, raw, acid_client)
                 classifications.append(classify_repo(repo_data, now))
+
+        own_repo_full_names = {r["full_name"].lower() for r in all_raw_repos}
+        notable_contributions = _fetch_notable_contributions(client, username, own_repo_full_names)
     except RateLimitError as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
         console.print(
@@ -188,6 +231,7 @@ def score(
         vector=vector,
         score=round(buildscore, 1),
         repos=classifications,
+        notable_contributions=notable_contributions,
     )
 
     if pretty:
@@ -242,6 +286,15 @@ def _print_pretty(result: BuildscoreResult) -> None:
             console.print(
                 f"    Architecture {a.architecture}/5 · Cross-Domain {a.cross_domain}/5 · "
                 f"Innovation {a.innovation}/5 · Documentation {a.documentation}/5"
+            )
+        console.print()
+
+    if result.notable_contributions:
+        console.print("[bold]Notable contributions[/bold] (external repos with a merged PR)")
+        for nc in result.notable_contributions:
+            console.print(
+                f"  {nc.repo_full_name} -- {nc.stars} stars, "
+                f"{nc.merged_pr_count} merged PR{'s' if nc.merged_pr_count != 1 else ''}"
             )
         console.print()
 
@@ -316,6 +369,14 @@ def _serialize(result: BuildscoreResult) -> dict:
                 ),
             }
             for c in result.repos
+        ],
+        "notable_contributions": [
+            {
+                "repo_full_name": nc.repo_full_name,
+                "stars": nc.stars,
+                "merged_pr_count": nc.merged_pr_count,
+            }
+            for nc in result.notable_contributions
         ],
     }
 
