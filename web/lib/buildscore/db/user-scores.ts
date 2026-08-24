@@ -120,6 +120,56 @@ export async function markFailed(username: string, error: string): Promise<void>
     .where(eq(userScores.username, username));
 }
 
+export interface LeaderboardEntry {
+  username: string;
+  score: number;
+  generatedAt: Date;
+}
+
+/** Every completed scan, ranked by score desc, for the public /leaderboard
+ * directory. Reads straight off the jsonb `result.score` rather than adding
+ * a dedicated column -- this table is small enough (one row per scanned
+ * user) that indexing it isn't worth the migration yet. */
+export async function getLeaderboard(limit: number, offset: number): Promise<LeaderboardEntry[]> {
+  const rows = await db.execute<{ username: string; score: string; generated_at: string }>(sql`
+    SELECT username, result->>'score' AS score, generated_at
+    FROM user_scores
+    WHERE status = 'completed' AND result IS NOT NULL
+    ORDER BY (result->>'score')::numeric DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `);
+  return rows.rows.map((r) => ({
+    username: r.username,
+    score: Number(r.score),
+    generatedAt: new Date(r.generated_at),
+  }));
+}
+
+export async function getLeaderboardCount(): Promise<number> {
+  const rows = await db.execute<{ count: string }>(sql`
+    SELECT count(*)::text AS count FROM user_scores WHERE status = 'completed' AND result IS NOT NULL
+  `);
+  return Number(rows.rows[0]?.count ?? 0);
+}
+
+/** Percentile of `score` among every other completed scan (0-100, rounded;
+ * 100 means nobody else scored higher). Only meaningful once a real
+ * population exists -- returns null with fewer than 2 other completed rows
+ * to score against, rather than a misleading "100th percentile of one." */
+export async function getPercentile(username: string, score: number): Promise<number | null> {
+  const rows = await db.execute<{ total: string; lower_or_equal: string }>(sql`
+    SELECT
+      count(*) FILTER (WHERE username != ${username})::text AS total,
+      count(*) FILTER (WHERE username != ${username} AND (result->>'score')::numeric <= ${score})::text AS lower_or_equal
+    FROM user_scores
+    WHERE status = 'completed' AND result IS NOT NULL
+  `);
+  const total = Number(rows.rows[0]?.total ?? 0);
+  const lowerOrEqual = Number(rows.rows[0]?.lower_or_equal ?? 0);
+  if (total < 2) return null;
+  return Math.round((lowerOrEqual / total) * 100);
+}
+
 function toUserScoreRow(row: typeof userScores.$inferSelect): UserScoreRow {
   return {
     username: row.username,

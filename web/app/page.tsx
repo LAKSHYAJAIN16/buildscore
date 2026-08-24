@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 
@@ -204,7 +205,7 @@ export default function Home() {
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-8 flex flex-col items-center gap-1"
+              className="mt-8 flex flex-col items-center gap-2"
             >
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {username.trim()}&apos;s buildscore
@@ -213,6 +214,12 @@ export default function Home() {
                 {scan.score}
                 <span className="text-2xl text-muted-foreground"> / 100</span>
               </p>
+              <Link
+                href={`/${encodeURIComponent(username.trim())}`}
+                className="mt-1 text-sm font-semibold text-emphasis underline underline-offset-2 hover:no-underline"
+              >
+                view full profile →
+              </Link>
             </motion.div>
           )}
 

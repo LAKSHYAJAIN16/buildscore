@@ -4,6 +4,7 @@ import { BuildscoreMark, GithubIcon } from "./icons";
 
 const EXPLORE_LINKS = [
   { href: "/", label: "home" },
+  { href: "/leaderboard", label: "leaderboard" },
   { href: "/thesis", label: "thesis" },
   { href: "/grants", label: "microgrants" },
   { href: "/blog", label: "blog" },

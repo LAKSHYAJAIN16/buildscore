@@ -257,3 +257,20 @@ export const SCAN_ABSOLUTE_TIMEOUT_MINUTES = 20;
 // requests -- kept tight.
 export const RATE_LIMIT_GRANTS_MAX_REQUESTS = 3;
 export const RATE_LIMIT_GRANTS_WINDOW_SECONDS = 3600;
+
+// --- Web-only: public profiles (app/[username], /leaderboard) ---
+
+// A letter-tier bucket of the absolute 0-100 score, display-only (cosmetic,
+// like activenessLabel -- never used in scoring math). Ported from cli.py's
+// _score_tier so the web profile and the CLI agree. Deliberately doesn't
+// claim a percentile from these cutoffs alone -- the percentile shown on a
+// profile is computed live against the real `user_scores` population
+// instead (see db/user-scores.ts getPercentile).
+export const SCORE_TIER_S_PLUS = 90;
+export const SCORE_TIER_S = 75;
+export const SCORE_TIER_A = 60;
+export const SCORE_TIER_B = 45;
+// below SCORE_TIER_B is tier "C"
+
+// Rows per page on the public /leaderboard directory.
+export const LEADERBOARD_PAGE_SIZE = 50;

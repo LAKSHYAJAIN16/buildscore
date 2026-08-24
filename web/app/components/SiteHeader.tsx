@@ -11,6 +11,7 @@ import { BuildscoreMark, GithubIcon } from "./icons";
 
 const NAV_LINKS = [
   { href: "/", label: "home" },
+  { href: "/leaderboard", label: "leaderboard" },
   { href: "/thesis", label: "thesis" },
 ];
 

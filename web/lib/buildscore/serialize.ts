@@ -5,6 +5,10 @@ import {
   ACTIVENESS_LABEL_ACTIVE,
   ACTIVENESS_LABEL_COOLING,
   ACTIVENESS_LABEL_THRIVING,
+  SCORE_TIER_A,
+  SCORE_TIER_B,
+  SCORE_TIER_S,
+  SCORE_TIER_S_PLUS,
 } from "./variables";
 
 export function activenessLabel(score: number): "thriving" | "active" | "cooling" | "quiet" {
@@ -12,6 +16,14 @@ export function activenessLabel(score: number): "thriving" | "active" | "cooling
   if (score >= ACTIVENESS_LABEL_ACTIVE) return "active";
   if (score >= ACTIVENESS_LABEL_COOLING) return "cooling";
   return "quiet";
+}
+
+export function scoreTier(score: number): "S+" | "S" | "A" | "B" | "C" {
+  if (score >= SCORE_TIER_S_PLUS) return "S+";
+  if (score >= SCORE_TIER_S) return "S";
+  if (score >= SCORE_TIER_A) return "A";
+  if (score >= SCORE_TIER_B) return "B";
+  return "C";
 }
 
 export function serializeResult(result: BuildscoreResult) {
