@@ -57,6 +57,26 @@ entirely optional — without a key, `ambition`/`quality` fall back to the
 pre-existing heuristics unchanged, and `--no-acid` skips it even if a key is
 configured.
 
+## Web app (`web/`)
+
+This repo also contains a Next.js 16 / React 19 web app in `web/` that turns the
+CLI's scoring logic into a public product: enter a GitHub username at
+`app/[username]` to get a Buildscore page, plus `leaderboard`, `grants`
+(micro-grant matching, backed by `lib/grants`), `quiz`, `thesis`, and `blog`
+sections, and API routes under `app/api/` (`scan`, `grants`, `health`). It
+uses Drizzle ORM against a Neon Postgres database (`drizzle/`,
+`drizzle.config.ts`) and the OpenAI SDK for LLM-backed features, styled with
+Tailwind + shadcn/Base UI components. See `web/DESIGN.md` and `web/PRODUCT.md`
+for the product/design brief and `web/DEPLOY.md` for deployment notes.
+
+To run it locally:
+
+```
+cd web
+npm install
+npm run dev
+```
+
 ## Known limitations (v0)
 
 - Commit activity comes from GitHub's `stats/commit_activity` endpoint, which
