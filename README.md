@@ -2,7 +2,7 @@
 
 > Turns a GitHub username into a "Builder Vector" and a 0-100 Buildscore.
 
-I wanted a way to actually measure how good a builder someone is from their GitHub instead of eyeballing their profile. It pulls a user's public repos and scores velocity, finishing, iteration, consistency, ambition, quality, and ai_leverage. This is v0 — it works off GitHub API metadata only (no semantic diff/AST analysis yet), `efficiency` isn't computed and shows `null`, and the final score renormalizes across whatever dimensions are available.
+Measuring how good a builder someone is from their GitHub usually means eyeballing their profile. This pulls a user's public repos instead and scores velocity, finishing, iteration, consistency, ambition, quality, and ai_leverage. This is v0 — it works off GitHub API metadata only (no semantic diff/AST analysis yet), `efficiency` isn't computed and shows `null`, and the final score renormalizes across whatever dimensions are available.
 
 ## Setup
 ```
